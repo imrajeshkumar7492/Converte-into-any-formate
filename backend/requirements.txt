@@ -37,3 +37,15 @@ redis>=5.0.1
 # Additional file processing
 img2pdf>=0.5.1
 pdf2image>=1.16.0
+# Advanced processing libraries
+pytesseract>=0.3.10
+opencv-python>=4.8.0
+reportlab>=4.0.4
+fpdf2>=2.7.6
+# Video/Audio processing
+ffmpeg-python>=0.2.0
+moviepy>=1.0.3
+# OCR and text processing
+easyocr>=1.7.0
+# PDF advanced features
+PyMuPDF>=1.23.0
