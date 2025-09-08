@@ -232,6 +232,8 @@ async def process_advanced_image(job: Job) -> Job:
             await update_job_in_db(job)
             await manager.send_job_update(job.id, {"progress": 30, "current_stage": "Processing"})
             
+            # Detect output format based on input and conversion type
+            input_ext = input_path.suffix.lower()
             if job.conversion_type == ConversionType.IMAGE_ENHANCE:
                 # Enhance image quality
                 enhancer = ImageEnhance.Sharpness(img)
@@ -246,7 +248,9 @@ async def process_advanced_image(job: Job) -> Job:
                 if job.options.get('denoise', False):
                     img = img.filter(ImageFilter.MedianFilter(size=3))
                 
-                output_path = PROCESSED_DIR / f"{job.id}_enhanced.{img.format.lower()}"
+                # Keep original format for enhancement
+                output_ext = input_ext if input_ext in ['.jpg', '.jpeg', '.png'] else '.png'
+                output_path = PROCESSED_DIR / f"{job.id}_enhanced{output_ext}"
                 
             elif job.conversion_type == ConversionType.IMAGE_RESIZE:
                 # Resize image
@@ -264,7 +268,9 @@ async def process_advanced_image(job: Job) -> Job:
                     width = int(img.width * ratio)
                     img = img.resize((width, height), Image.Resampling.LANCZOS)
                 
-                output_path = PROCESSED_DIR / f"{job.id}_resized.{img.format.lower()}"
+                # Keep original format for resize
+                output_ext = input_ext if input_ext in ['.jpg', '.jpeg', '.png'] else '.png'
+                output_path = PROCESSED_DIR / f"{job.id}_resized{output_ext}"
                 
             elif job.conversion_type == ConversionType.IMAGE_COMPRESS:
                 # Compress image
@@ -285,8 +291,15 @@ async def process_advanced_image(job: Job) -> Job:
             # Save the processed image
             if job.conversion_type == ConversionType.IMAGE_COMPRESS:
                 img.save(output_path, "JPEG", quality=quality, optimize=optimize)
+            elif output_ext in ['.jpg', '.jpeg']:
+                # Convert to RGB for JPEG if needed
+                if img.mode in ("RGBA", "LA", "P"):
+                    rgb_img = Image.new("RGB", img.size, (255, 255, 255))
+                    rgb_img.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
+                    img = rgb_img
+                img.save(output_path, "JPEG", quality=90)
             else:
-                img.save(output_path)
+                img.save(output_path, "PNG")
         
         job.output_files = [str(output_path)]
         job.progress = 100
