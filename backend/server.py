@@ -704,15 +704,24 @@ async def process_job(job: Job):
             job = await process_batch_operations(job)
         elif job.conversion_type in [ConversionType.JPG_TO_PNG, ConversionType.PNG_TO_JPG, 
                                    ConversionType.WEBP_TO_PNG, ConversionType.PNG_TO_WEBP,
-                                   ConversionType.HEIC_TO_JPG]:
+                                   ConversionType.HEIC_TO_JPG, ConversionType.PNG_TO_SVG]:
             job = await process_image_conversion(job)
         elif job.conversion_type in [ConversionType.MERGE_PDF, ConversionType.SPLIT_PDF, 
                                    ConversionType.COMPRESS_PDF]:
             job = await process_pdf_operations(job)
         elif job.conversion_type in [ConversionType.DOCX_TO_PDF, ConversionType.XLSX_TO_PDF,
                                    ConversionType.PPTX_TO_PDF, ConversionType.JPG_TO_PDF,
-                                   ConversionType.PDF_TO_JPG]:
+                                   ConversionType.PDF_TO_JPG, ConversionType.PDF_TO_PNG,
+                                   ConversionType.PDF_TO_DOCX, ConversionType.HTML_TO_PDF]:
             job = await process_document_to_pdf(job)
+        elif job.conversion_type in [ConversionType.VIDEO_TO_GIF, ConversionType.WEBM_TO_GIF,
+                                   ConversionType.VIDEO_COMPRESS, ConversionType.AUDIO_CONVERT]:
+            # For now, these will use basic processing (can be enhanced later)
+            job.status = JobStatus.FAILED
+            job.error_message = "Video/Audio conversion not yet implemented"
+        else:
+            # Default to basic image conversion for unknown types
+            job = await process_image_conversion(job)
         
         # Update job in database
         await update_job_in_db(job)
