@@ -977,14 +977,23 @@ async def get_jobs(
     
     jobs = await db.jobs.find(query).sort("created_at", -1).skip(offset).limit(limit).to_list(length=None)
     
-    # Convert dates for each job
+    # Convert dates and prepare response
+    response_jobs = []
     for job_data in jobs:
+        # Convert ObjectId to string if present
+        if '_id' in job_data:
+            del job_data['_id']
+            
+        # Convert dates for each job
         for field in ['created_at', 'started_at', 'completed_at', 'estimated_completion']:
             if job_data.get(field):
-                job_data[field] = datetime.fromisoformat(job_data[field])
+                if isinstance(job_data[field], str):
+                    job_data[field] = datetime.fromisoformat(job_data[field])
+                    
+        response_jobs.append(job_data)
     
     return {
-        "jobs": jobs,
+        "jobs": response_jobs,
         "total": await db.jobs.count_documents(query),
         "limit": limit,
         "offset": offset
