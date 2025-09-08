@@ -1,0 +1,55 @@
+name: Docker Compose Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create environment file
+      run: |
+        cat > .env << EOF
+        MONGO_URL=mongodb://admin:password123@mongodb:27017/converte_pro?authSource=admin
+        DB_NAME=converte_pro
+        REDIS_URL=redis://redis:6379
+        CORS_ORIGINS=http://localhost:3000
+        REACT_APP_BACKEND_URL=http://localhost:8000
+        EOF
+    
+    - name: Start services
+      run: |
+        docker-compose up -d --build
+        sleep 30  # Wait for services to be ready
+    
+    - name: Wait for services to be healthy
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:8000/api/; do sleep 2; done'
+        timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
+    
+    - name: Run integration tests
+      run: |
+        # Test backend API
+        curl -f http://localhost:8000/api/stats
+        curl -f http://localhost:8000/api/
+        
+        # Test frontend
+        curl -f http://localhost:3000
+    
+    - name: Check logs
+      if: failure()
+      run: |
+        docker-compose logs backend
+        docker-compose logs frontend
+        docker-compose logs mongodb
+        docker-compose logs redis
+    
+    - name: Stop services
+      if: always()
+      run: docker-compose down -v

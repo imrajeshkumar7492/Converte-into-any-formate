@@ -5,7 +5,7 @@ import {
   Settings, Zap, Star, Monitor, Smartphone, Tablet, Camera, Video, 
   FileImage, FilePlus, FileX, Lock, Unlock, Crop, RotateCw, Eye,
   Palette, Maximize, Minimize, Archive, BookOpen, Clock, TrendingUp,
-  Shield, Award, Sparkles, Play, Pause, Square
+  Shield, Award, Sparkles, Play, Pause, Square, Moon, Sun
 } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
@@ -20,6 +20,7 @@ import { Slider } from './components/ui/slider';
 import { Switch } from './components/ui/switch';
 import { toast } from 'sonner';
 import axios from 'axios';
+import UnifiedSettingsPanel from './components/UnifiedSettingsPanel';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -463,6 +464,8 @@ function App() {
   const [processing, setProcessing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Image Processing');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [showUnifiedSettings, setShowUnifiedSettings] = useState(false);
 
   // WebSocket connection for real-time updates
   const connectWebSocket = useCallback((jobId) => {
@@ -636,7 +639,11 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className={`min-h-screen transition-colors duration-300 ${
+      darkMode 
+        ? 'bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900' 
+        : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100'
+    }`}>
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900">
         <div className="absolute inset-0 bg-black/20"></div>
@@ -650,6 +657,26 @@ function App() {
           }}
         ></div>
         <div className="relative container mx-auto px-4 py-16">
+          {/* Header Controls */}
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDarkMode(!darkMode)}
+              className="text-white hover:bg-white/20"
+            >
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowUnifiedSettings(true)}
+              className="text-white hover:bg-white/20"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+          
           <div className="text-center text-white">
             <div className="flex items-center justify-center mb-6">
               <div className="bg-white/10 backdrop-blur-sm rounded-full p-4 border border-white/20">
@@ -682,9 +709,9 @@ function App() {
       </div>
 
       {/* Stats Bar */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200">
+      <div className={`${darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white/80 border-gray-200'} backdrop-blur-sm border-b`}>
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
+          <div className={`flex items-center justify-center gap-8 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             <div className="flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-500" />
               <span>{stats.success_rate || '0%'} Success Rate</span>
@@ -705,7 +732,7 @@ function App() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Tool Selection Panel */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-8 shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+            <Card className={`sticky top-8 shadow-xl border-0 backdrop-blur-sm ${darkMode ? 'bg-slate-800/90' : 'bg-white/90'}`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <Settings className="w-6 h-6 text-blue-600" />
@@ -1011,6 +1038,15 @@ function App() {
           </Card>
         </div>
       </div>
+
+      {/* Unified Settings Panel */}
+      <UnifiedSettingsPanel
+        conversionType={conversionType}
+        options={options}
+        setOptions={setOptions}
+        isOpen={showUnifiedSettings}
+        onClose={() => setShowUnifiedSettings(false)}
+      />
     </div>
   );
 }

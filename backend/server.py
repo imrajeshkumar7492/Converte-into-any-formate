@@ -17,6 +17,15 @@ from enum import Enum
 import json
 import tempfile
 import subprocess
+import traceback
+from contextlib import asynccontextmanager
+
+# Enhanced imports for better error handling
+import redis
+from celery import Celery
+from celery.exceptions import Retry
+import hashlib
+import mimetypes
 
 # File processing imports
 from PIL import Image, ImageEnhance, ImageFilter
@@ -45,10 +54,48 @@ except ImportError:
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Enhanced configuration with error handling
+try:
+    mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+    db_name = os.environ.get('DB_NAME', 'converte_pro')
+    redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+    
+    # MongoDB connection with retry logic
+    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+    db = client[db_name]
+    
+    # Redis connection for caching and queue
+    redis_client = redis.from_url(redis_url, decode_responses=True)
+    
+    # Celery configuration for background tasks
+    celery_app = Celery(
+        'converte',
+        broker=redis_url,
+        backend=redis_url,
+        include=['server']
+    )
+    
+    celery_app.conf.update(
+        task_serializer='json',
+        accept_content=['json'],
+        result_serializer='json',
+        timezone='UTC',
+        enable_utc=True,
+        task_track_started=True,
+        task_time_limit=3600,  # 1 hour
+        task_soft_time_limit=3300,  # 55 minutes
+        worker_prefetch_multiplier=1,
+        task_acks_late=True,
+        worker_disable_rate_limits=True,
+    )
+    
+except Exception as e:
+    logging.error(f"Failed to initialize database connections: {e}")
+    # Fallback to basic setup
+    client = None
+    db = None
+    redis_client = None
+    celery_app = None
 
 # Create directories for file storage
 UPLOAD_DIR = ROOT_DIR / "uploads"
@@ -682,46 +729,86 @@ async def process_document_to_pdf(job: Job) -> Job:
     
     return job
 
-# Enhanced main job processing function
-async def process_job(job: Job):
-    """Enhanced job processing with priority and advanced features"""
+# Enhanced main job processing function with retry mechanism
+async def process_job(job: Job, retry_count: int = 0):
+    """Enhanced job processing with priority, advanced features, and retry mechanism"""
+    max_retries = 3
+    
     try:
         job.status = JobStatus.PROCESSING
         job.started_at = datetime.now(timezone.utc)
+        
+        # Add retry information to metadata
+        if retry_count > 0:
+            job.metadata["retry_count"] = retry_count
+            job.metadata["retry_reason"] = "Previous attempt failed"
+        
         await update_job_in_db(job)
-        await manager.send_job_update(job.id, {"progress": 0, "status": "processing", "started_at": job.started_at.isoformat()})
+        await manager.send_job_update(job.id, {
+            "progress": 0, 
+            "status": "processing", 
+            "started_at": job.started_at.isoformat(),
+            "retry_count": retry_count
+        })
+        
+        # Validate input files exist
+        for file_path in job.input_files:
+            if not Path(file_path).exists():
+                raise FileNotFoundError(f"Input file not found: {file_path}")
         
         # Route to appropriate processor based on conversion type
-        if job.conversion_type in [ConversionType.IMAGE_ENHANCE, ConversionType.IMAGE_RESIZE, 
-                                 ConversionType.IMAGE_COMPRESS, ConversionType.IMAGE_WATERMARK]:
-            job = await process_advanced_image(job)
-        elif job.conversion_type in [ConversionType.PDF_OCR, ConversionType.PDF_WATERMARK,
-                                   ConversionType.PDF_PROTECT, ConversionType.PDF_UNLOCK,
-                                   ConversionType.PDF_ROTATE, ConversionType.PDF_PAGE_NUMBERS]:
-            job = await process_advanced_pdf(job)
-        elif job.conversion_type in [ConversionType.BATCH_IMAGE_CONVERT, ConversionType.BATCH_PDF_MERGE,
-                                   ConversionType.BATCH_COMPRESS]:
-            job = await process_batch_operations(job)
-        elif job.conversion_type in [ConversionType.JPG_TO_PNG, ConversionType.PNG_TO_JPG, 
-                                   ConversionType.WEBP_TO_PNG, ConversionType.PNG_TO_WEBP,
-                                   ConversionType.HEIC_TO_JPG, ConversionType.PNG_TO_SVG]:
-            job = await process_image_conversion(job)
-        elif job.conversion_type in [ConversionType.MERGE_PDF, ConversionType.SPLIT_PDF, 
-                                   ConversionType.COMPRESS_PDF]:
-            job = await process_pdf_operations(job)
-        elif job.conversion_type in [ConversionType.DOCX_TO_PDF, ConversionType.XLSX_TO_PDF,
-                                   ConversionType.PPTX_TO_PDF, ConversionType.JPG_TO_PDF,
-                                   ConversionType.PDF_TO_JPG, ConversionType.PDF_TO_PNG,
-                                   ConversionType.PDF_TO_DOCX, ConversionType.HTML_TO_PDF]:
-            job = await process_document_to_pdf(job)
-        elif job.conversion_type in [ConversionType.VIDEO_TO_GIF, ConversionType.WEBM_TO_GIF,
-                                   ConversionType.VIDEO_COMPRESS, ConversionType.AUDIO_CONVERT]:
-            # For now, these will use basic processing (can be enhanced later)
-            job.status = JobStatus.FAILED
-            job.error_message = "Video/Audio conversion not yet implemented"
-        else:
-            # Default to basic image conversion for unknown types
-            job = await process_image_conversion(job)
+        processor_map = {
+            # Image processing
+            ConversionType.IMAGE_ENHANCE: process_advanced_image,
+            ConversionType.IMAGE_RESIZE: process_advanced_image,
+            ConversionType.IMAGE_COMPRESS: process_advanced_image,
+            ConversionType.IMAGE_WATERMARK: process_advanced_image,
+            
+            # PDF processing
+            ConversionType.PDF_OCR: process_advanced_pdf,
+            ConversionType.PDF_WATERMARK: process_advanced_pdf,
+            ConversionType.PDF_PROTECT: process_advanced_pdf,
+            ConversionType.PDF_UNLOCK: process_advanced_pdf,
+            ConversionType.PDF_ROTATE: process_advanced_pdf,
+            ConversionType.PDF_PAGE_NUMBERS: process_advanced_pdf,
+            
+            # Batch operations
+            ConversionType.BATCH_IMAGE_CONVERT: process_batch_operations,
+            ConversionType.BATCH_PDF_MERGE: process_batch_operations,
+            ConversionType.BATCH_COMPRESS: process_batch_operations,
+            
+            # Basic conversions
+            ConversionType.JPG_TO_PNG: process_image_conversion,
+            ConversionType.PNG_TO_JPG: process_image_conversion,
+            ConversionType.WEBP_TO_PNG: process_image_conversion,
+            ConversionType.PNG_TO_WEBP: process_image_conversion,
+            ConversionType.HEIC_TO_JPG: process_image_conversion,
+            ConversionType.PNG_TO_SVG: process_image_conversion,
+            
+            # PDF operations
+            ConversionType.MERGE_PDF: process_pdf_operations,
+            ConversionType.SPLIT_PDF: process_pdf_operations,
+            ConversionType.COMPRESS_PDF: process_pdf_operations,
+            
+            # Document conversions
+            ConversionType.DOCX_TO_PDF: process_document_to_pdf,
+            ConversionType.XLSX_TO_PDF: process_document_to_pdf,
+            ConversionType.PPTX_TO_PDF: process_document_to_pdf,
+            ConversionType.JPG_TO_PDF: process_document_to_pdf,
+            ConversionType.PDF_TO_JPG: process_document_to_pdf,
+            ConversionType.PDF_TO_PNG: process_document_to_pdf,
+            ConversionType.PDF_TO_DOCX: process_document_to_pdf,
+            ConversionType.HTML_TO_PDF: process_document_to_pdf,
+            
+            # Video/Audio (to be implemented)
+            ConversionType.VIDEO_TO_GIF: process_video_conversion,
+            ConversionType.WEBM_TO_GIF: process_video_conversion,
+            ConversionType.VIDEO_COMPRESS: process_video_conversion,
+            ConversionType.AUDIO_CONVERT: process_audio_conversion,
+        }
+        
+        processor = processor_map.get(job.conversion_type, process_image_conversion)
+        job = await processor(job)
         
         # Update job in database
         await update_job_in_db(job)
@@ -743,11 +830,187 @@ async def process_job(job: Job):
             asyncio.create_task(cleanup_job_files(job.id, delay_hours=2))
         
     except Exception as e:
+        error_msg = str(e)
+        error_traceback = traceback.format_exc()
+        
+        logging.error(f"Job {job.id} failed (attempt {retry_count + 1}): {error_msg}")
+        logging.error(f"Traceback: {error_traceback}")
+        
+        # Check if we should retry
+        if retry_count < max_retries and not isinstance(e, (FileNotFoundError, ValueError)):
+            # Retry after exponential backoff
+            retry_delay = 2 ** retry_count
+            logging.info(f"Retrying job {job.id} in {retry_delay} seconds (attempt {retry_count + 1}/{max_retries})")
+            
+            job.status = JobStatus.PENDING
+            job.error_message = f"Retrying... (attempt {retry_count + 1}/{max_retries})"
+            job.metadata["retry_count"] = retry_count + 1
+            job.metadata["retry_delay"] = retry_delay
+            job.metadata["last_error"] = error_msg
+            
+            await update_job_in_db(job)
+            await manager.send_job_update(job.id, {
+                "progress": 0, 
+                "status": "pending", 
+                "error": job.error_message,
+                "retry_count": retry_count + 1
+            })
+            
+            # Schedule retry
+            asyncio.create_task(retry_job(job, retry_count + 1, retry_delay))
+        else:
+            # Final failure
+            job.status = JobStatus.FAILED
+            job.error_message = error_msg
+            job.current_stage = "Failed"
+            job.metadata["final_error"] = error_msg
+            job.metadata["error_traceback"] = error_traceback
+            
+            await update_job_in_db(job)
+            await manager.send_job_update(job.id, {
+                "progress": 0, 
+                "status": "failed", 
+                "error": error_msg, 
+                "current_stage": "Failed"
+            })
+
+async def retry_job(job: Job, retry_count: int, delay: int):
+    """Retry a failed job after a delay"""
+    await asyncio.sleep(delay)
+    await process_job(job, retry_count)
+
+# Video processing functions
+async def process_video_conversion(job: Job) -> Job:
+    """Process video conversions using FFmpeg"""
+    try:
+        input_path = Path(job.input_files[0])
+        
+        job.stages = ["Loading video", "Processing", "Converting", "Saving result"]
+        job.current_stage = "Loading video"
+        job.progress = 10
+        await update_job_in_db(job)
+        await manager.send_job_update(job.id, {"progress": 10, "current_stage": "Loading video"})
+        
+        if job.conversion_type == ConversionType.VIDEO_TO_GIF:
+            # Convert video to GIF
+            output_path = PROCESSED_DIR / f"{job.id}_converted.gif"
+            
+            # FFmpeg command for video to GIF conversion
+            cmd = [
+                'ffmpeg', '-i', str(input_path),
+                '-vf', 'fps=10,scale=320:-1:flags=lanczos',
+                '-c:v', 'gif',
+                '-y', str(output_path)
+            ]
+            
+        elif job.conversion_type == ConversionType.VIDEO_COMPRESS:
+            # Compress video
+            output_path = PROCESSED_DIR / f"{job.id}_compressed.mp4"
+            quality = job.options.get('quality', 23)  # CRF value
+            
+            cmd = [
+                'ffmpeg', '-i', str(input_path),
+                '-c:v', 'libx264',
+                '-crf', str(quality),
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-y', str(output_path)
+            ]
+            
+        else:
+            raise ValueError(f"Unsupported video conversion type: {job.conversion_type}")
+        
+        job.current_stage = "Converting"
+        job.progress = 50
+        await update_job_in_db(job)
+        await manager.send_job_update(job.id, {"progress": 50, "current_stage": "Converting"})
+        
+        # Execute FFmpeg command
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg failed: {result.stderr}")
+        
+        job.output_files = [str(output_path)]
+        job.progress = 100
+        job.status = JobStatus.COMPLETED
+        job.completed_at = datetime.now(timezone.utc)
+        job.current_stage = "Completed"
+        
+        # Calculate file sizes
+        job.file_sizes = {
+            "input": input_path.stat().st_size,
+            "output": output_path.stat().st_size
+        }
+        
+    except Exception as e:
         job.status = JobStatus.FAILED
         job.error_message = str(e)
+        job.progress = 0
         job.current_stage = "Failed"
+    
+    return job
+
+# Audio processing functions
+async def process_audio_conversion(job: Job) -> Job:
+    """Process audio conversions using FFmpeg"""
+    try:
+        input_path = Path(job.input_files[0])
+        
+        job.stages = ["Loading audio", "Processing", "Converting", "Saving result"]
+        job.current_stage = "Loading audio"
+        job.progress = 10
         await update_job_in_db(job)
-        await manager.send_job_update(job.id, {"progress": 0, "status": "failed", "error": str(e), "current_stage": "Failed"})
+        await manager.send_job_update(job.id, {"progress": 10, "current_stage": "Loading audio"})
+        
+        # Determine output format
+        target_format = job.options.get('target_format', 'mp3')
+        output_path = PROCESSED_DIR / f"{job.id}_converted.{target_format}"
+        
+        # FFmpeg command for audio conversion
+        cmd = ['ffmpeg', '-i', str(input_path)]
+        
+        if target_format == 'mp3':
+            cmd.extend(['-c:a', 'libmp3lame', '-b:a', '192k'])
+        elif target_format == 'wav':
+            cmd.extend(['-c:a', 'pcm_s16le'])
+        elif target_format == 'aac':
+            cmd.extend(['-c:a', 'aac', '-b:a', '128k'])
+        elif target_format == 'flac':
+            cmd.extend(['-c:a', 'flac'])
+        
+        cmd.extend(['-y', str(output_path)])
+        
+        job.current_stage = "Converting"
+        job.progress = 50
+        await update_job_in_db(job)
+        await manager.send_job_update(job.id, {"progress": 50, "current_stage": "Converting"})
+        
+        # Execute FFmpeg command
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg failed: {result.stderr}")
+        
+        job.output_files = [str(output_path)]
+        job.progress = 100
+        job.status = JobStatus.COMPLETED
+        job.completed_at = datetime.now(timezone.utc)
+        job.current_stage = "Completed"
+        
+        # Calculate file sizes
+        job.file_sizes = {
+            "input": input_path.stat().st_size,
+            "output": output_path.stat().st_size
+        }
+        
+    except Exception as e:
+        job.status = JobStatus.FAILED
+        job.error_message = str(e)
+        job.progress = 0
+        job.current_stage = "Failed"
+    
+    return job
 
 async def update_job_in_db(job: Job):
     """Update job in MongoDB with enhanced fields"""
