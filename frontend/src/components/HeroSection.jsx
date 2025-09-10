@@ -3,7 +3,6 @@ import { Upload, ChevronDown, FileText, Image, Video, Music, Archive, Clock, Set
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '../hooks/use-toast';
-import { mockConversionProcess } from '../data/mockData';
 
 const HeroSection = () => {
   const [isDragOver, setIsDragOver] = useState(false);
