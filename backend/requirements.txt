@@ -38,7 +38,7 @@ docx2pdf>=0.1.8
 PyMuPDF>=1.23.0
 ebooklib>=0.18
 beautifulsoup4>=4.12.0
-python-odf>=1.4.1
+odfpy>=1.4.1
 # Image processing
 opencv-python>=4.8.0
 # Archive handling
