@@ -463,7 +463,7 @@ test_plan:
   current_focus: []
   stuck_tasks: []
   test_all: false
-  test_priority: "multimedia_conversion_testing_completed"
+  test_priority: "pdf_conversion_issues_resolved"
 
 agent_communication:
     - agent: "testing"
