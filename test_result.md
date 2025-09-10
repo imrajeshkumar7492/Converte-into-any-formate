@@ -364,6 +364,18 @@ backend:
           agent: "testing"
           comment: "✅ PASSED - Format alignment and UI issues excellently resolved! Responsive 4-column desktop grid layout verified and working perfectly. Mobile layout stacks properly in single column. Format selectors are perfectly aligned and sized. Arrow positioning (→) is visible and properly positioned between format selectors. Spacing and typography are excellent throughout the interface."
 
+  - task: "FFmpeg Dependency for Audio/Video Conversions"
+    implemented: true
+    working: false
+    file: "/app/backend/converters/audio_converter.py, /app/backend/converters/video_converter.py"
+    stuck_count: 1
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ CRITICAL LIMITATION IDENTIFIED - Audio and video conversions are NOT working due to missing FFmpeg dependency. All multimedia conversion tests failed (0/4 passed): MP3→WAV, MP4→AVI, MP4→MP3 extraction all fail with 'FFmpeg not found in system PATH' and 'ffprobe' errors. Backend logs show 'Couldn't find ffmpeg or avconv' warnings. This explains user reports of conversion functionality not working for multimedia files. SOLUTION REQUIRED: Install FFmpeg system dependency to enable audio/video conversions. Current system only supports image and document conversions."
+
   - task: "Comprehensive Expanded Format Options"
     implemented: true
     working: true
