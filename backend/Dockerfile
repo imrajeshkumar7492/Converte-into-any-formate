@@ -1,5 +1,5 @@
 # Multi-stage build for Python backend
-FROM python:3.11-slim as builder
+FROM python:3.13-slim as builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -26,7 +26,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Production stage
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
