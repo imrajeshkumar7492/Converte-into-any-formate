@@ -129,47 +129,105 @@ const HeroSection = () => {
     }
 
     setIsConverting(true);
+    let completedCount = 0;
     
-    // Mock conversion process for each file
+    // Convert each file
     for (let conversion of readyConversions) {
-      // Update status to converting
-      setConversions(prev => 
-        prev.map(conv => 
-          conv.id === conversion.id 
-            ? { ...conv, status: 'converting', progress: 0 }
-            : conv
-        )
-      );
-
-      // Simulate conversion progress
-      for (let progress = 0; progress <= 100; progress += 20) {
-        await new Promise(resolve => setTimeout(resolve, 300));
+      try {
+        // Update status to converting
         setConversions(prev => 
           prev.map(conv => 
             conv.id === conversion.id 
-              ? { ...conv, progress }
+              ? { ...conv, status: 'converting', progress: 0 }
               : conv
           )
         );
-      }
 
-      // Mark as completed
-      setConversions(prev => 
-        prev.map(conv => 
-          conv.id === conversion.id 
-            ? { ...conv, status: 'completed', progress: 100 }
-            : conv
-        )
-      );
-      
-      setCompletedConversions(prev => [...prev, conversion.id]);
+        // Simulate progress while conversion happens
+        const progressInterval = setInterval(() => {
+          setConversions(prev => 
+            prev.map(conv => {
+              if (conv.id === conversion.id && conv.progress < 90) {
+                return { ...conv, progress: conv.progress + 10 };
+              }
+              return conv;
+            })
+          );
+        }, 500);
+
+        // Perform actual conversion
+        const formData = new FormData();
+        formData.append('file', conversion.file);
+        formData.append('target_format', conversion.targetFormat.toLowerCase());
+
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/convert`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        clearInterval(progressInterval);
+
+        if (!response.ok) {
+          throw new Error(`Conversion failed: ${response.statusText}`);
+        }
+
+        // Get the converted file as blob
+        const blob = await response.blob();
+        
+        // Create download URL and store it
+        const downloadUrl = URL.createObjectURL(blob);
+        
+        // Mark as completed
+        setConversions(prev => 
+          prev.map(conv => 
+            conv.id === conversion.id 
+              ? { 
+                  ...conv, 
+                  status: 'completed', 
+                  progress: 100,
+                  downloadUrl: downloadUrl,
+                  convertedBlob: blob
+                }
+              : conv
+          )
+        );
+        
+        completedCount++;
+        setCompletedConversions(prev => [...prev, conversion.id]);
+
+      } catch (error) {
+        console.error('Conversion error:', error);
+        
+        // Mark as failed
+        setConversions(prev => 
+          prev.map(conv => 
+            conv.id === conversion.id 
+              ? { 
+                  ...conv, 
+                  status: 'failed', 
+                  progress: 0,
+                  error: error.message
+                }
+              : conv
+          )
+        );
+
+        toast({
+          title: "Conversion Failed",
+          description: `Failed to convert ${conversion.file.name}: ${error.message}`,
+          variant: "destructive"
+        });
+      }
     }
     
     setIsConverting(false);
-    toast({
-      title: "Conversion Complete!",
-      description: `${readyConversions.length} file(s) converted successfully.`,
-    });
+    
+    if (completedCount > 0) {
+      toast({
+        title: "Conversion Complete!",
+        description: `${completedCount} file(s) converted successfully.`,
+      });
+    }
   };
 
   const handleDownload = (conversionId) => {
