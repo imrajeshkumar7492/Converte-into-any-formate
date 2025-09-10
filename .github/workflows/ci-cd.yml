@@ -334,7 +334,7 @@ jobs:
           # Deploy backend
           echo "Deploying backend to production..."
           cd backend
-          railway login --token ${{ secrets.RAILWAY_TOKEN }}
+          echo "${{ secrets.RAILWAY_TOKEN }}" | railway login
           railway environment production
           railway up --service backend
           
