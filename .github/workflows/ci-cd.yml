@@ -276,14 +276,26 @@ jobs:
 
       - name: Run staging smoke tests
         run: |
-          # Wait for deployment
+          echo "Waiting for deployment to stabilize..."
           sleep 60
           
-          # Test backend health
-          curl -f https://staging-api-converter.imrajeshkumar7492.dev/api/health || exit 1
+          echo "Testing backend health..."
+          if curl -f https://staging-api-converter.imrajeshkumar7492.dev/api/health; then
+            echo "✅ Backend health check passed"
+          else
+            echo "❌ Backend health check failed"
+            exit 1
+          fi
           
-          # Test frontend
-          curl -f https://staging-converter.imrajeshkumar7492.dev || exit 1
+          echo "Testing frontend..."
+          if curl -f https://staging-converter.imrajeshkumar7492.dev; then
+            echo "✅ Frontend check passed"
+          else
+            echo "❌ Frontend check failed"
+            exit 1
+          fi
+          
+          echo "🎉 All smoke tests passed!"
 
   # Deploy to Production
   deploy-production:
