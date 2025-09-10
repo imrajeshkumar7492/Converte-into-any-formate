@@ -232,17 +232,13 @@ const HeroSection = () => {
 
   const handleDownload = (conversionId) => {
     const conversion = conversions.find(c => c.id === conversionId);
-    if (conversion && conversion.status === 'completed') {
-      // Create a mock download file
-      const blob = new Blob(['Mock converted file content'], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
+    if (conversion && conversion.status === 'completed' && conversion.downloadUrl) {
       const link = document.createElement('a');
-      link.href = url;
+      link.href = conversion.downloadUrl;
       link.download = `${conversion.file.name.split('.')[0]}.${conversion.targetFormat.toLowerCase()}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
       
       toast({
         title: "Download Started!",
