@@ -269,7 +269,8 @@ jobs:
           # Deploy backend
           echo "Deploying backend to staging..."
           cd backend
-          echo "${{ secrets.RAILWAY_TOKEN }}" | railway login
+          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
+          railway login
           railway environment staging
           railway up --service backend
           
