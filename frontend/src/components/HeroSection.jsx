@@ -406,7 +406,7 @@ const HeroSection = () => {
                           <SelectValue placeholder="Choose format" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getFormatOptions(conversion.originalFormat).map((format) => (
+                          {getFormatOptions(conversion).map((format) => (
                             <SelectItem key={format} value={format}>
                               {format}
                             </SelectItem>
