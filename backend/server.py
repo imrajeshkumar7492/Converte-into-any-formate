@@ -14,6 +14,7 @@ import io
 import tempfile
 import asyncio
 from converters.converter_manager import ConversionManager
+from utils.cache import cache
 
 
 ROOT_DIR = Path(__file__).parent
@@ -127,7 +128,12 @@ async def upload_files(files: List[UploadFile] = File(...)):
 @api_router.post("/convert")
 async def convert_file(
     file: UploadFile = File(...),
-    target_format: str = Form(...)
+    target_format: str = Form(...),
+    image_quality: int = Form(95),
+    max_width: int = Form(None),
+    max_height: int = Form(None),
+    compression_level: str = Form("high"),
+    preserve_metadata: bool = Form(True)
 ):
     """Convert a single file to target format"""
     try:
@@ -157,10 +163,20 @@ async def convert_file(
         
         # Perform conversion
         try:
+            # Create conversion options
+            conversion_options = {
+                'image_quality': image_quality,
+                'max_width': max_width,
+                'max_height': max_height,
+                'compression_level': compression_level,
+                'preserve_metadata': preserve_metadata
+            }
+            
             converted_data = ConversionManager.convert_file(
                 io.BytesIO(content), 
                 source_format, 
-                target_format.lower()
+                target_format.lower(),
+                **conversion_options
             )
             
             # Update job status
@@ -304,6 +320,29 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@api_router.get("/cache/stats")
+async def get_cache_stats():
+    """Get cache statistics"""
+    try:
+        stats = cache.get_stats()
+        return {
+            "cache_stats": stats,
+            "message": "Cache statistics retrieved successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cache stats: {str(e)}")
+
+@api_router.post("/cache/clear")
+async def clear_cache():
+    """Clear the conversion cache"""
+    try:
+        cache.clear()
+        return {
+            "message": "Cache cleared successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
