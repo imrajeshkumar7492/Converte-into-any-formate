@@ -10,7 +10,7 @@ import os
 from PIL import Image
 
 # Get backend URL from environment
-BACKEND_URL = "https://system-status-2.preview.emergentagent.com/api"
+BACKEND_URL = "https://clean-embed.preview.emergentagent.com/api"
 
 class EdgeCaseTester:
     def __init__(self):

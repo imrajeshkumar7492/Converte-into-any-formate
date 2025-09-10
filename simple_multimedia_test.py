@@ -12,7 +12,7 @@ import tempfile
 import subprocess
 
 # Get backend URL from environment
-BACKEND_URL = "https://system-status-2.preview.emergentagent.com/api"
+BACKEND_URL = "https://clean-embed.preview.emergentagent.com/api"
 
 def create_real_mp3():
     """Create a real MP3 file using FFmpeg"""

@@ -11,7 +11,7 @@ import tempfile
 import time
 
 # Get backend URL from environment
-BACKEND_URL = "https://system-status-2.preview.emergentagent.com/api"
+BACKEND_URL = "https://clean-embed.preview.emergentagent.com/api"
 
 class AudioVideoTester:
     def __init__(self):

@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 # Get backend URL from environment
-BACKEND_URL = "https://system-status-2.preview.emergentagent.com/api"
+BACKEND_URL = "https://clean-embed.preview.emergentagent.com/api"
 
 class FFmpegTester:
     def __init__(self):
