@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 # Get backend URL from environment
-BACKEND_URL = "https://converter-repair.preview.emergentagent.com/api"
+BACKEND_URL = "https://broken-converter.preview.emergentagent.com/api"
 
 class FileConversionTester:
     def __init__(self):
