@@ -272,16 +272,76 @@ async def convert_batch(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Batch conversion failed: {str(e)}")
 
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for deployment monitoring"""
+    try:
+        # Test database connection
+        db_status = "healthy"
+        try:
+            # Test MongoDB connection
+            await db.list_collection_names()
+        except Exception as e:
+            db_status = f"unhealthy: {str(e)}"
+        
+        # Test conversion system
+        conversion_status = "healthy"
+        try:
+            test_formats = conversion_manager.get_supported_formats("JPG")
+            if not test_formats:
+                conversion_status = "unhealthy: no supported formats"
+        except Exception as e:
+            conversion_status = f"unhealthy: {str(e)}"
+        
+        health_data = {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0",
+            "environment": os.environ.get("ENVIRONMENT", "development"),
+            "services": {
+                "database": db_status,
+                "conversion_engine": conversion_status,
+                "api": "healthy"
+            }
+        }
+        
+        # Return 503 if any service is unhealthy
+        if "unhealthy" in str(health_data):
+            raise HTTPException(status_code=503, detail=health_data)
+            
+        return health_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise HTTPException(status_code=503, detail={
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
 @api_router.get("/supported-formats/{source_format}")
 async def get_supported_formats(source_format: str):
-    """Get supported target formats for a source format"""
+    """Get supported target formats for a given source format"""
     try:
-        supported = ConversionManager.get_supported_formats(source_format.lower())
+        # Normalize the format
+        source_format = source_format.upper()
+        
+        # Get supported formats from the conversion manager
+        supported_formats = conversion_manager.get_supported_formats(source_format)
+        
+        if not supported_formats:
+            raise HTTPException(status_code=404, detail=f"No supported formats found for {source_format}")
+        
         return {
-            "source_format": source_format.upper(),
-            "supported_formats": [f.upper() for f in supported]
+            "source_format": source_format,
+            "supported_formats": supported_formats,
+            "count": len(supported_formats)
         }
+        
     except Exception as e:
+        logger.error(f"Error getting supported formats for {source_format}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get supported formats: {str(e)}")
 
 @api_router.get("/conversion-jobs")
