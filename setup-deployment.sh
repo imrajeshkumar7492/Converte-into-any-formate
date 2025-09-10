@@ -38,7 +38,7 @@ if [ ! -d ".git" ]; then
 fi
 
 # Check if we're in the right directory
-if [ ! -f "package.json" ] || [ ! -d "frontend" ] || [ ! -d "backend" ]; then
+if [ ! -d "frontend" ] || [ ! -d "backend" ]; then
     print_error "Please run this script from the root of the project directory."
     exit 1
 fi
