@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, ChevronDown, FileText, Image, Video, Music, Archive, Clock, Settings, Download, X, Check } from 'lucide-react';
+import { Upload, ChevronDown, FileText, Image, Video, Music, Archive, Clock, Settings, Download, X, Check, CheckCircle, Eye } from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '../hooks/use-toast';
