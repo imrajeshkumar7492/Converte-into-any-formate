@@ -73,17 +73,70 @@ const HeroSection = () => {
 
   const getFormatOptions = (originalFormat) => {
     const formatMap = {
-      'JPG': ['PNG', 'PDF', 'WEBP', 'GIF'],
-      'PNG': ['JPG', 'PDF', 'WEBP', 'GIF'],
-      'PDF': ['JPG', 'PNG', 'DOC', 'DOCX'],
-      'MP4': ['AVI', 'MOV', 'MP3', 'GIF'],
-      'AVI': ['MP4', 'MOV', 'MP3'],
-      'MP3': ['WAV', 'OGG', 'M4A', 'FLAC'],
-      'DOC': ['PDF', 'DOCX', 'TXT'],
-      'DOCX': ['PDF', 'DOC', 'TXT']
+      // Image formats
+      'JPG': ['PNG', 'WEBP', 'BMP', 'TIFF', 'GIF', 'PDF', 'ICO', 'SVG'],
+      'JPEG': ['PNG', 'WEBP', 'BMP', 'TIFF', 'GIF', 'PDF', 'ICO', 'SVG'],
+      'PNG': ['JPG', 'WEBP', 'BMP', 'TIFF', 'GIF', 'PDF', 'ICO', 'SVG'],
+      'WEBP': ['JPG', 'PNG', 'BMP', 'TIFF', 'GIF', 'PDF', 'ICO'],
+      'BMP': ['JPG', 'PNG', 'WEBP', 'TIFF', 'GIF', 'PDF', 'ICO'],
+      'TIFF': ['JPG', 'PNG', 'WEBP', 'BMP', 'GIF', 'PDF', 'ICO'],
+      'GIF': ['JPG', 'PNG', 'WEBP', 'BMP', 'TIFF', 'PDF', 'ICO'],
+      'SVG': ['PNG', 'JPG', 'PDF', 'WEBP'],
+      'ICO': ['PNG', 'JPG', 'BMP', 'GIF'],
+      
+      // Video formats
+      'MP4': ['AVI', 'MOV', 'WMV', 'FLV', 'MKV', 'WEBM', 'OGV', 'M4V', 'MP3', 'WAV', 'GIF'],
+      'AVI': ['MP4', 'MOV', 'WMV', 'FLV', 'MKV', 'WEBM', 'OGV', 'MP3', 'WAV'],
+      'MOV': ['MP4', 'AVI', 'WMV', 'FLV', 'MKV', 'WEBM', 'OGV', 'MP3', 'WAV'],
+      'WMV': ['MP4', 'AVI', 'MOV', 'FLV', 'MKV', 'WEBM', 'MP3', 'WAV'],
+      'FLV': ['MP4', 'AVI', 'MOV', 'WMV', 'MKV', 'WEBM', 'MP3', 'WAV'],
+      'MKV': ['MP4', 'AVI', 'MOV', 'WMV', 'WEBM', 'MP3', 'WAV'],
+      'WEBM': ['MP4', 'AVI', 'MOV', 'MKV', 'OGV', 'MP3', 'WAV'],
+      'OGV': ['MP4', 'WEBM', 'AVI', 'MOV', 'MP3', 'WAV'],
+      'M4V': ['MP4', 'AVI', 'MOV', 'MP3', 'WAV'],
+      
+      // Audio formats
+      'MP3': ['WAV', 'FLAC', 'AAC', 'OGG', 'M4A', 'WMA', 'AIFF', 'AU'],
+      'WAV': ['MP3', 'FLAC', 'AAC', 'OGG', 'M4A', 'WMA', 'AIFF', 'AU'],
+      'FLAC': ['MP3', 'WAV', 'AAC', 'OGG', 'M4A', 'WMA', 'AIFF'],
+      'AAC': ['MP3', 'WAV', 'FLAC', 'OGG', 'M4A', 'WMA', 'AIFF'],
+      'OGG': ['MP3', 'WAV', 'FLAC', 'AAC', 'M4A', 'WMA', 'AIFF'],
+      'M4A': ['MP3', 'WAV', 'FLAC', 'AAC', 'OGG', 'WMA', 'AIFF'],
+      'WMA': ['MP3', 'WAV', 'FLAC', 'AAC', 'OGG', 'M4A', 'AIFF'],
+      'AIFF': ['MP3', 'WAV', 'FLAC', 'AAC', 'OGG', 'M4A', 'WMA'],
+      'AU': ['MP3', 'WAV', 'FLAC', 'AAC'],
+      
+      // Document formats
+      'PDF': ['DOC', 'DOCX', 'TXT', 'RTF', 'ODT', 'EPUB', 'MOBI', 'JPG', 'PNG'],
+      'DOC': ['PDF', 'DOCX', 'TXT', 'RTF', 'ODT', 'EPUB'],
+      'DOCX': ['PDF', 'DOC', 'TXT', 'RTF', 'ODT', 'EPUB'],
+      'TXT': ['PDF', 'DOC', 'DOCX', 'RTF', 'ODT'],
+      'RTF': ['PDF', 'DOC', 'DOCX', 'TXT', 'ODT'],
+      'ODT': ['PDF', 'DOC', 'DOCX', 'TXT', 'RTF'],
+      'EPUB': ['PDF', 'MOBI', 'DOC', 'DOCX', 'TXT'],
+      'MOBI': ['PDF', 'EPUB', 'DOC', 'DOCX', 'TXT'],
+      
+      // Spreadsheet formats
+      'XLS': ['XLSX', 'CSV', 'ODS', 'PDF', 'TXT'],
+      'XLSX': ['XLS', 'CSV', 'ODS', 'PDF', 'TXT'],
+      'CSV': ['XLS', 'XLSX', 'ODS', 'PDF', 'TXT'],
+      'ODS': ['XLS', 'XLSX', 'CSV', 'PDF', 'TXT'],
+      
+      // Presentation formats
+      'PPT': ['PPTX', 'PDF', 'ODP', 'JPG', 'PNG'],
+      'PPTX': ['PPT', 'PDF', 'ODP', 'JPG', 'PNG'],
+      'ODP': ['PPT', 'PPTX', 'PDF', 'JPG', 'PNG'],
+      
+      // Archive formats
+      'ZIP': ['RAR', '7Z', 'TAR', 'GZ', 'BZ2'],
+      'RAR': ['ZIP', '7Z', 'TAR', 'GZ'],
+      '7Z': ['ZIP', 'RAR', 'TAR', 'GZ'],
+      'TAR': ['ZIP', 'RAR', '7Z', 'GZ'],
+      'GZ': ['ZIP', 'RAR', '7Z', 'TAR'],
+      'BZ2': ['ZIP', 'RAR', '7Z', 'TAR']
     };
     
-    return formatMap[originalFormat] || ['PDF', 'JPG', 'PNG', 'MP4', 'MP3'];
+    return formatMap[originalFormat.toUpperCase()] || ['PDF', 'JPG', 'PNG', 'MP4', 'MP3', 'DOC', 'TXT'];
   };
 
   const handleFormatChange = (conversionId, format) => {
