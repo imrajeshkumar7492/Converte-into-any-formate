@@ -251,6 +251,14 @@ const HeroSection = () => {
     });
   };
 
+  const removeFile = (conversionId) => {
+    setConversions(prev => prev.filter(conv => conv.id !== conversionId));
+    if (conversions.length === 1) {
+      setShowConversionInterface(false);
+      setSelectedFiles([]);
+    }
+  };
+
   const addMoreFiles = () => {
     fileInputRef.current?.click();
   };
