@@ -247,3 +247,47 @@ jobs:
           echo "Deploying backend to production..."
           railway up --project 10b65955-d74c-46a7-930a-05a590867ac9 --service "$BACKEND_SERVICE" --environment production
           echo "Deploying frontend to production..."
+          railway up --project 10b65955-d74c-46a7-930a-05a590867ac9 --service "$FRONTEND_SERVICE" --environment production
+      - name: Run production smoke tests
+        run: |
+          sleep 60
+          curl -f https://api-converter.imrajeshkumar7492.dev/api/health
+          curl -f https://converter.imrajeshkumar7492.dev
+
+  # -------------------------------
+  # Deploy to GitHub Pages
+  # -------------------------------
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+      - name: Install dependencies
+        run: cd frontend && yarn install --frozen-lockfile
+      - name: Build for GitHub Pages
+        run: cd frontend && yarn build
+        env:
+          CI: false
+          REACT_APP_BACKEND_URL: https://api-converter.imrajeshkumar7492.dev
+          PUBLIC_URL: /Converte-into-any-formate
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/build
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
