@@ -207,3 +207,123 @@ class DocumentConverter:
             return output_buffer.getvalue()
         except Exception as e:
             raise Exception(f"CSV to Excel conversion failed: {str(e)}")
+    
+    @staticmethod
+    def convert_pdf_to_image(input_file: BinaryIO, target_format: str = 'png') -> bytes:
+        """Convert PDF to image (JPG/PNG) - handles multi-page PDFs by converting first page"""
+        try:
+            # Try using PyMuPDF (fitz) first - better for PDF to image conversion
+            try:
+                input_file.seek(0)
+                pdf_data = input_file.read()
+                
+                # Open PDF with PyMuPDF
+                pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
+                
+                # Get first page (for now, we'll convert only the first page)
+                # TODO: In future, could create multi-page image or ZIP of images
+                page = pdf_document[0]
+                
+                # Render page to image
+                mat = fitz.Matrix(2.0, 2.0)  # 2x zoom for better quality
+                pix = page.get_pixmap(matrix=mat)
+                
+                # Convert to PIL Image
+                img_data = pix.tobytes("png")
+                image = Image.open(io.BytesIO(img_data))
+                
+                # Convert to target format
+                output_buffer = io.BytesIO()
+                
+                if target_format.lower() in ['jpg', 'jpeg']:
+                    # Convert to RGB for JPEG (remove alpha channel)
+                    if image.mode in ['RGBA', 'LA']:
+                        background = Image.new('RGB', image.size, (255, 255, 255))
+                        if image.mode == 'RGBA':
+                            background.paste(image, mask=image.split()[-1])
+                        else:
+                            background.paste(image)
+                        image = background
+                    elif image.mode != 'RGB':
+                        image = image.convert('RGB')
+                    
+                    image.save(output_buffer, format='JPEG', quality=95, optimize=True)
+                else:  # PNG
+                    if image.mode != 'RGBA':
+                        image = image.convert('RGBA')
+                    image.save(output_buffer, format='PNG', optimize=True)
+                
+                pdf_document.close()
+                return output_buffer.getvalue()
+                
+            except ImportError:
+                # Fallback: Use reportlab to create a simple image representation
+                # This is a basic fallback - not ideal but better than nothing
+                input_file.seek(0)
+                reader = PdfReader(input_file)
+                
+                # Extract text from first page
+                first_page = reader.pages[0]
+                text_content = first_page.extract_text()
+                
+                # Create a simple image with the text
+                from PIL import Image, ImageDraw, ImageFont
+                
+                # Create a white image
+                img_width, img_height = 800, 1000
+                image = Image.new('RGB', (img_width, img_height), 'white')
+                draw = ImageDraw.Draw(image)
+                
+                # Try to use a default font
+                try:
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
+                except:
+                    font = ImageFont.load_default()
+                
+                # Draw text on image (simple word wrapping)
+                y_position = 50
+                words = text_content.split()
+                line = ""
+                
+                for word in words:
+                    test_line = line + word + " "
+                    bbox = draw.textbbox((0, 0), test_line, font=font)
+                    if bbox[2] > img_width - 100:  # Line too long
+                        if line:
+                            draw.text((50, y_position), line.strip(), fill='black', font=font)
+                            y_position += 20
+                            line = word + " "
+                        else:
+                            draw.text((50, y_position), word, fill='black', font=font)
+                            y_position += 20
+                    else:
+                        line = test_line
+                    
+                    if y_position > img_height - 100:  # Image full
+                        break
+                
+                if line.strip():
+                    draw.text((50, y_position), line.strip(), fill='black', font=font)
+                
+                # Save as target format
+                output_buffer = io.BytesIO()
+                
+                if target_format.lower() in ['jpg', 'jpeg']:
+                    image.save(output_buffer, format='JPEG', quality=95)
+                else:  # PNG
+                    image.save(output_buffer, format='PNG')
+                
+                return output_buffer.getvalue()
+                
+        except Exception as e:
+            raise Exception(f"PDF to image conversion failed: {str(e)}")
+    
+    @staticmethod
+    def convert_pdf_to_jpg(input_file: BinaryIO) -> bytes:
+        """Convert PDF to JPG"""
+        return DocumentConverter.convert_pdf_to_image(input_file, 'jpg')
+    
+    @staticmethod
+    def convert_pdf_to_png(input_file: BinaryIO) -> bytes:
+        """Convert PDF to PNG"""
+        return DocumentConverter.convert_pdf_to_image(input_file, 'png')
