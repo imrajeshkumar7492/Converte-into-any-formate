@@ -60,14 +60,14 @@ class ConversionManager:
         target_cat = cls.get_format_category(target_format)
         
         try:
-            # Image conversions
+            # Image conversions (most reliable)
             if source_cat == 'image' and target_cat == 'image':
                 return ImageConverter.convert_image(input_file, source_format, target_format)
             
             elif source_cat == 'image' and target_cat == 'document' and target_format.lower() == 'pdf':
                 return ImageConverter.convert_to_pdf(input_file, source_format)
             
-            # Document conversions
+            # Document conversions (reliable)
             elif source_cat == 'document':
                 if target_format.lower() == 'txt':
                     if source_format.lower() == 'pdf':
@@ -85,7 +85,7 @@ class ConversionManager:
                     if source_format.lower() == 'pdf':
                         return DocumentConverter.convert_pdf_to_docx(input_file)
             
-            # Spreadsheet conversions
+            # Spreadsheet conversions (reliable)
             elif source_cat == 'spreadsheet':
                 if target_format.lower() == 'csv':
                     if source_format.lower() in ['xls', 'xlsx']:
@@ -94,18 +94,26 @@ class ConversionManager:
                     if source_format.lower() == 'csv':
                         return DocumentConverter.convert_csv_to_excel(input_file)
             
-            # Audio conversions
+            # Audio conversions (may need FFmpeg)
             elif source_cat == 'audio' and target_cat == 'audio':
-                return AudioConverter.convert_audio(input_file, source_format, target_format)
+                try:
+                    return AudioConverter.convert_audio(input_file, source_format, target_format)
+                except Exception as audio_error:
+                    # If audio conversion fails, provide helpful error
+                    raise Exception(f"Audio conversion failed (FFmpeg may be required): {str(audio_error)}")
             
-            # Video conversions
+            # Video conversions (may need FFmpeg)
             elif source_cat == 'video':
-                if target_cat == 'video':
-                    return VideoConverter.convert_video(input_file, source_format, target_format)
-                elif target_cat == 'audio':
-                    return VideoConverter.extract_audio_from_video(input_file, source_format, target_format)
-                elif target_format.lower() == 'gif':
-                    return VideoConverter.convert_video_to_gif(input_file, source_format)
+                try:
+                    if target_cat == 'video':
+                        return VideoConverter.convert_video(input_file, source_format, target_format)
+                    elif target_cat == 'audio':
+                        return VideoConverter.extract_audio_from_video(input_file, source_format, target_format)
+                    elif target_format.lower() == 'gif':
+                        return VideoConverter.convert_video_to_gif(input_file, source_format)
+                except Exception as video_error:
+                    # If video conversion fails, provide helpful error
+                    raise Exception(f"Video conversion failed (FFmpeg may be required): {str(video_error)}")
             
             else:
                 raise Exception(f"Conversion from {source_format} to {target_format} is not implemented yet")
