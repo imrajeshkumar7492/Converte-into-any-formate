@@ -40,6 +40,22 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+class ConversionJob(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    filename: str
+    source_format: str
+    target_format: str
+    status: str = "pending"  # pending, processing, completed, failed
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    file_size: int = 0
+
+class ConversionJobCreate(BaseModel):
+    filename: str
+    source_format: str
+    target_format: str
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
