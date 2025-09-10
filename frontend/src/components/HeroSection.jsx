@@ -176,82 +176,169 @@ const HeroSection = () => {
           Easily convert files from one format to another, online.
         </p>
 
-        {/* Upload Area */}
-        <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-200 p-8 mb-8 transition-all duration-300 hover:border-purple-300">
-          <div
-            className={`relative ${isDragOver ? 'border-purple-400 bg-purple-50' : ''} transition-all duration-300`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {/* Choose Files Button */}
-            <div className="mb-6">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-medium px-8 py-3 text-lg rounded-lg transition-all duration-300 transform hover:scale-105"
+        {!showConversionInterface ? (
+          /* Upload Area */
+          <div className="bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-200 p-8 mb-8 transition-all duration-300 hover:border-purple-300">
+            <div
+              className={`relative ${isDragOver ? 'border-purple-400 bg-purple-50' : ''} transition-all duration-300`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {/* Choose Files Button */}
+              <div className="mb-6">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-medium px-8 py-3 text-lg rounded-lg transition-all duration-300 transform hover:scale-105"
+                >
+                  <Upload className="w-5 h-5 mr-2" />
+                  Choose Files
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+
+              {/* File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+                accept="*/*"
+              />
+
+              {/* Drop Zone */}
+              <div className="text-center">
+                <Upload className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg mb-2">Drop any files here!</p>
+                <p className="text-sm text-gray-400">
+                  Max file size 1GB. 
+                  <a href="#" className="text-purple-500 hover:text-purple-600 ml-1 font-medium">
+                    Sign Up
+                  </a> for more
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Conversion Interface */
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Convert Files</h3>
+              <Button 
+                variant="outline" 
+                onClick={addMoreFiles}
+                className="text-purple-600 border-purple-200 hover:bg-purple-50"
               >
-                <Upload className="w-5 h-5 mr-2" />
-                Choose Files
-                <ChevronDown className="w-4 h-4 ml-2" />
+                <Upload className="w-4 h-4 mr-2" />
+                Add More Files
               </Button>
             </div>
 
-            {/* File Input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-              accept="*/*"
-            />
+            {/* File Conversion List */}
+            <div className="space-y-4 mb-6">
+              {conversions.map((conversion) => (
+                <div key={conversion.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      {getFileIcon(conversion.file)}
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                          {conversion.file.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(conversion.file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(conversion.id)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
 
-            {/* Drop Zone */}
-            <div className="text-center">
-              <Upload className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg mb-2">Drop any files here!</p>
-              <p className="text-sm text-gray-400">
-                Max file size 1GB. 
-                <a href="#" className="text-purple-500 hover:text-purple-600 ml-1 font-medium">
-                  Sign Up
-                </a> for more
-              </p>
+                  <div className="flex items-center space-x-4">
+                    {/* Original Format */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600">From:</span>
+                      <span className="bg-gray-100 px-2 py-1 rounded text-sm font-medium">
+                        {conversion.originalFormat}
+                      </span>
+                    </div>
+
+                    <span className="text-gray-400">→</span>
+
+                    {/* Target Format Selection */}
+                    <div className="flex items-center space-x-2 flex-1">
+                      <span className="text-sm text-gray-600">To:</span>
+                      <Select onValueChange={(value) => handleFormatChange(conversion.id, value)}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="Format" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getFormatOptions(conversion.originalFormat).map((format) => (
+                            <SelectItem key={format} value={format}>
+                              {format}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Status/Progress */}
+                    <div className="text-right min-w-20">
+                      {conversion.status === 'ready' && (
+                        <span className="text-sm text-gray-500">Ready</span>
+                      )}
+                      {conversion.status === 'converting' && (
+                        <div className="space-y-1">
+                          <div className="text-sm text-blue-600">Converting...</div>
+                          <div className="w-16 bg-blue-200 rounded-full h-1">
+                            <div 
+                              className="bg-blue-500 h-1 rounded-full transition-all duration-300"
+                              style={{ width: `${conversion.progress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+                      {conversion.status === 'completed' && (
+                        <div className="flex items-center space-x-1 text-green-600">
+                          <Check className="w-4 h-4" />
+                          <span className="text-sm">Complete</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Processing Indicator */}
-            {isProcessing && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <div className="text-blue-600 font-medium mb-2">
-                  {mockConversionProcess.steps[processingStep]}
-                </div>
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${((processingStep + 1) / mockConversionProcess.steps.length) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-
-            {/* Selected Files */}
-            {selectedFiles.length > 0 && !isProcessing && (
-              <div className="mt-6 space-y-2">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Selected Files:</h3>
-                {selectedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      {getFileIcon(file)}
-                      <span className="text-sm text-gray-700 truncate max-w-xs">{file.name}</span>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Convert Button */}
+            <div className="flex justify-center space-x-4">
+              <Button
+                onClick={handleConvertAll}
+                disabled={isConverting || conversions.every(c => !c.targetFormat)}
+                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-medium px-8 py-3 text-lg disabled:opacity-50"
+              >
+                {isConverting ? 'Converting...' : 'Convert All'}
+              </Button>
+              
+              {completedConversions.length > 0 && (
+                <Button
+                  variant="outline"
+                  className="border-green-200 text-green-600 hover:bg-green-50 font-medium px-8 py-3"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download All
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Terms */}
         <p className="text-sm text-gray-500">
