@@ -22,7 +22,11 @@ WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
+# Switch to appuser to create .local directory properly
+USER appuser
 RUN pip install --user -r requirements.txt
+# Switch back to root for remaining setup
+USER root
 
 # Production stage
 FROM python:3.11-slim
