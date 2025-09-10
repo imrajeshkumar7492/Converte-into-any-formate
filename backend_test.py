@@ -160,7 +160,9 @@ startxref
                                 break
                         
                         # Check file size is reasonable (not just 20 bytes)
-                        if file_info.get('file_size', 0) < 50:
+                        file_size = file_info.get('file_size', 0)
+                        if file_size < 50:
+                            print(f"DEBUG: File {file_info.get('filename')} has size {file_size} bytes")
                             all_valid = False
                             break
                     
