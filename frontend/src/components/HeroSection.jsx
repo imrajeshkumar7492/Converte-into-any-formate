@@ -205,12 +205,50 @@ const HeroSection = () => {
     });
   };
 
-  const removeFile = (conversionId) => {
-    setConversions(prev => prev.filter(conv => conv.id !== conversionId));
-    if (conversions.length === 1) {
-      setShowConversionInterface(false);
-      setSelectedFiles([]);
+  const handleDownload = (conversionId) => {
+    const conversion = conversions.find(c => c.id === conversionId);
+    if (conversion && conversion.status === 'completed') {
+      // Create a mock download file
+      const blob = new Blob(['Mock converted file content'], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${conversion.file.name.split('.')[0]}.${conversion.targetFormat.toLowerCase()}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download Started!",
+        description: `${conversion.file.name} downloaded successfully.`,
+      });
     }
+  };
+
+  const handleDownloadAll = () => {
+    const completedConversions = conversions.filter(c => c.status === 'completed');
+    
+    if (completedConversions.length === 0) {
+      toast({
+        title: "No files to download",
+        description: "Please convert files first before downloading.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Download each completed file
+    completedConversions.forEach((conversion, index) => {
+      setTimeout(() => {
+        handleDownload(conversion.id);
+      }, index * 500); // Stagger downloads
+    });
+
+    toast({
+      title: "Downloads Started!",
+      description: `${completedConversions.length} file(s) downloading...`,
+    });
   };
 
   const addMoreFiles = () => {
