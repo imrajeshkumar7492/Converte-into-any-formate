@@ -71,6 +71,99 @@ const HeroSection = () => {
     return <FileText className="w-5 h-5 text-gray-500" />;
   };
 
+  const getFormatOptions = (originalFormat) => {
+    const formatMap = {
+      'JPG': ['PNG', 'PDF', 'WEBP', 'GIF'],
+      'PNG': ['JPG', 'PDF', 'WEBP', 'GIF'],
+      'PDF': ['JPG', 'PNG', 'DOC', 'DOCX'],
+      'MP4': ['AVI', 'MOV', 'MP3', 'GIF'],
+      'AVI': ['MP4', 'MOV', 'MP3'],
+      'MP3': ['WAV', 'OGG', 'M4A', 'FLAC'],
+      'DOC': ['PDF', 'DOCX', 'TXT'],
+      'DOCX': ['PDF', 'DOC', 'TXT']
+    };
+    
+    return formatMap[originalFormat] || ['PDF', 'JPG', 'PNG', 'MP4', 'MP3'];
+  };
+
+  const handleFormatChange = (conversionId, format) => {
+    setConversions(prev => 
+      prev.map(conv => 
+        conv.id === conversionId 
+          ? { ...conv, targetFormat: format }
+          : conv
+      )
+    );
+  };
+
+  const handleConvertAll = async () => {
+    const readyConversions = conversions.filter(conv => conv.targetFormat);
+    
+    if (readyConversions.length === 0) {
+      toast({
+        title: "Please select output formats",
+        description: "Choose a target format for each file to start conversion.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsConverting(true);
+    
+    // Mock conversion process for each file
+    for (let conversion of readyConversions) {
+      // Update status to converting
+      setConversions(prev => 
+        prev.map(conv => 
+          conv.id === conversion.id 
+            ? { ...conv, status: 'converting', progress: 0 }
+            : conv
+        )
+      );
+
+      // Simulate conversion progress
+      for (let progress = 0; progress <= 100; progress += 20) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setConversions(prev => 
+          prev.map(conv => 
+            conv.id === conversion.id 
+              ? { ...conv, progress }
+              : conv
+          )
+        );
+      }
+
+      // Mark as completed
+      setConversions(prev => 
+        prev.map(conv => 
+          conv.id === conversion.id 
+            ? { ...conv, status: 'completed', progress: 100 }
+            : conv
+        )
+      );
+      
+      setCompletedConversions(prev => [...prev, conversion.id]);
+    }
+    
+    setIsConverting(false);
+    toast({
+      title: "Conversion Complete!",
+      description: `${readyConversions.length} file(s) converted successfully.`,
+    });
+  };
+
+  const removeFile = (conversionId) => {
+    setConversions(prev => prev.filter(conv => conv.id !== conversionId));
+    if (conversions.length === 1) {
+      setShowConversionInterface(false);
+      setSelectedFiles([]);
+    }
+  };
+
+  const addMoreFiles = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <section className="bg-gray-50 py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto text-center">
