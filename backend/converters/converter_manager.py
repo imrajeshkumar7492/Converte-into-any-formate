@@ -84,6 +84,15 @@ class ConversionManager:
                 elif target_format.lower() in ['doc', 'docx']:
                     if source_format.lower() == 'pdf':
                         return DocumentConverter.convert_pdf_to_docx(input_file)
+                
+                # PDF to image conversions
+                elif target_format.lower() in ['jpg', 'jpeg']:
+                    if source_format.lower() == 'pdf':
+                        return DocumentConverter.convert_pdf_to_jpg(input_file)
+                
+                elif target_format.lower() == 'png':
+                    if source_format.lower() == 'pdf':
+                        return DocumentConverter.convert_pdf_to_png(input_file)
             
             # Spreadsheet conversions (reliable)
             elif source_cat == 'spreadsheet':
