@@ -292,18 +292,26 @@ jobs:
 
       - name: Deploy to Railway (Production)
         run: |
-          # Install Railway CLI
-          npm install -g @railway/cli
+          # Install Railway CLI with error handling
+          echo "Installing Railway CLI..."
+          npm install -g @railway/cli --silent 2>/dev/null || npm install -g @railway/cli
+          
+          # Verify Railway CLI installation
+          railway --version
           
           # Deploy backend
+          echo "Deploying backend to production..."
           cd backend
           railway login --token ${{ secrets.RAILWAY_TOKEN }}
           railway environment production
           railway up --service backend
           
           # Deploy frontend
+          echo "Deploying frontend to production..."
           cd ../frontend
           railway up --service frontend
+          
+          echo "✅ Railway deployment completed"
 
       - name: Run production smoke tests
         run: |
