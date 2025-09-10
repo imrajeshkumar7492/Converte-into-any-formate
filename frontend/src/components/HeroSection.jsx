@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Upload, ChevronDown, FileText, Image, Video, Music, Archive, Clock } from 'lucide-react';
+import { Upload, ChevronDown, FileText, Image, Video, Music, Archive, Clock, Settings, Download, X, Check } from 'lucide-react';
 import { Button } from './ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '../hooks/use-toast';
 import { mockConversionProcess } from '../data/mockData';
 
@@ -9,6 +10,10 @@ const HeroSection = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
+  const [showConversionInterface, setShowConversionInterface] = useState(false);
+  const [conversions, setConversions] = useState([]);
+  const [isConverting, setIsConverting] = useState(false);
+  const [completedConversions, setCompletedConversions] = useState([]);
   const fileInputRef = useRef(null);
   const { toast } = useToast();
 
