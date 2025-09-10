@@ -448,6 +448,17 @@ const HeroSection = () => {
                             </Button>
                           </div>
                         )}
+                        {conversion.status === 'failed' && (
+                          <div className="flex items-center space-x-1 text-red-600">
+                            <X className="w-4 h-4" />
+                            <span className="text-sm">Failed</span>
+                            {conversion.error && (
+                              <span className="text-xs text-gray-500 ml-2" title={conversion.error}>
+                                ({conversion.error.substring(0, 20)}...)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
