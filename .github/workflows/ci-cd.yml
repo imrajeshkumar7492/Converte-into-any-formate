@@ -271,14 +271,12 @@ jobs:
           # Deploy backend
           echo "Deploying backend to staging..."
           cd backend
-          railway login
-          railway environment staging
-          railway up --service backend
+          railway up --service backend --environment staging
           
           # Deploy frontend
           echo "Deploying frontend to staging..."
           cd ../frontend
-          railway up --service frontend
+          railway up --service frontend --environment staging
           
           echo "✅ Railway deployment completed"
 
