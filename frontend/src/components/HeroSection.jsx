@@ -446,11 +446,12 @@ const HeroSection = () => {
               
               {completedConversions.length > 0 && (
                 <Button
+                  onClick={handleDownloadAll}
                   variant="outline"
                   className="border-green-200 text-green-600 hover:bg-green-50 font-medium px-8 py-3"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download All
+                  Download All ({completedConversions.length})
                 </Button>
               )}
             </div>
