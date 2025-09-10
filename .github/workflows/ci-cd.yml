@@ -370,7 +370,8 @@ jobs:
 
       - name: Notify deployment success
         uses: 8398a7/action-slack@v3
-        if: success() && secrets.SLACK_WEBHOOK_URL != ''
+        if: success() && vars.SLACK_NOTIFICATIONS_ENABLED == 'true'
+        continue-on-error: true
         with:
           status: success
           text: '✅ Production deployment successful!'
@@ -379,21 +380,23 @@ jobs:
 
       - name: Notify deployment failure
         uses: 8398a7/action-slack@v3
-        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        if: failure() && vars.SLACK_NOTIFICATIONS_ENABLED == 'true'
+        continue-on-error: true
         with:
           status: failure
           text: '❌ Production deployment failed!'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Log deployment result (if no Slack)
-        if: secrets.SLACK_WEBHOOK_URL == ''
+      - name: Log deployment result
+        if: always()
         run: |
-          if [ "${{ job.status }}" = "success" ]; then
+          if [ "${{ job.status }}" = "success" ] || [ "$GITHUB_JOB_STATUS" = "success" ]; then
             echo "✅ Production deployment completed successfully!"
           else
-            echo "❌ Production deployment failed!"
+            echo "❌ Production deployment encountered issues!"
           fi
+          echo "Note: Slack notifications are optional and can be enabled by setting SLACK_NOTIFICATIONS_ENABLED variable to 'true'"
 
   # GitHub Pages Deployment (Static Demo)
   deploy-pages:
