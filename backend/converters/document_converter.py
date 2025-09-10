@@ -12,6 +12,7 @@ from openpyxl.utils import get_column_letter
 import csv
 from pptx import Presentation
 from PIL import Image
+import fitz  # PyMuPDF for PDF to image conversion
 
 class DocumentConverter:
     @staticmethod
