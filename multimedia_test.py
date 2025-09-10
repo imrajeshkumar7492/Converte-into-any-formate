@@ -36,22 +36,65 @@ class MultimediaConversionTester:
             print(f"   Details: {details}")
     
     def create_test_mp3(self):
-        """Create a minimal test MP3 file"""
-        # Create a simple sine wave MP3 using basic audio data
-        # This is a minimal MP3 header + data that should be recognizable
-        mp3_data = b'\xff\xfb\x90\x00' + b'\x00' * 100  # Basic MP3 header + padding
-        return mp3_data
+        """Create a valid test MP3 file using pydub"""
+        try:
+            from pydub import AudioSegment
+            from pydub.generators import Sine
+            import io
+            
+            # Generate a 1-second sine wave at 440Hz
+            sine_wave = Sine(440).to_audio_segment(duration=1000)
+            
+            # Export to MP3
+            buffer = io.BytesIO()
+            sine_wave.export(buffer, format="mp3")
+            buffer.seek(0)
+            return buffer.getvalue()
+        except Exception as e:
+            print(f"Warning: Could not create real MP3, using minimal data: {e}")
+            # Fallback to minimal MP3 data
+            mp3_data = b'\xff\xfb\x90\x00' + b'\x00' * 100
+            return mp3_data
     
     def create_test_mp4(self):
-        """Create a minimal test MP4 file"""
-        # Create a minimal MP4 file with basic headers
-        # This is a very basic MP4 structure that should be recognizable
-        mp4_data = (
-            b'\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41isom'
-            b'\x00\x00\x00\x08free'
-            + b'\x00' * 200  # Padding to make it a reasonable size
-        )
-        return mp4_data
+        """Create a valid test MP4 file using moviepy"""
+        try:
+            from moviepy import VideoClip
+            import numpy as np
+            import tempfile
+            import os
+            
+            # Create a simple 1-second video clip
+            def make_frame(t):
+                # Create a simple red frame
+                return np.full((100, 100, 3), [255, 0, 0], dtype=np.uint8)
+            
+            clip = VideoClip(make_frame, duration=1)
+            
+            # Export to MP4
+            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
+                temp_path = temp_file.name
+            
+            try:
+                clip.write_videofile(temp_path, verbose=False, logger=None)
+                
+                with open(temp_path, 'rb') as f:
+                    mp4_data = f.read()
+                
+                return mp4_data
+            finally:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                    
+        except Exception as e:
+            print(f"Warning: Could not create real MP4, using minimal data: {e}")
+            # Fallback to minimal MP4 data
+            mp4_data = (
+                b'\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41isom'
+                b'\x00\x00\x00\x08free'
+                + b'\x00' * 200
+            )
+            return mp4_data
     
     def test_mp3_to_wav_conversion(self):
         """Test MP3 to WAV audio conversion - should now work with FFmpeg"""
