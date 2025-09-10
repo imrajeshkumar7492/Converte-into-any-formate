@@ -238,75 +238,7 @@ jobs:
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
-  # Deploy to Staging
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/develop'
-    environment:
-      name: staging
-      url: https://staging-converter.imrajeshkumar7492.dev
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Railway (Staging)
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          # Check if Railway token is available
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ RAILWAY_TOKEN secret is not configured"
-            echo "💡 You need a PROJECT token from Railway, not an account token"
-            echo "🔗 Get it from: Railway Dashboard → Project → Settings → Tokens → Create Project Token"
-            exit 1
-          fi
-          
-          # Install Railway CLI with error handling
-          echo "Installing Railway CLI..."
-          npm install -g @railway/cli --silent 2>/dev/null || npm install -g @railway/cli
-          
-          # Verify Railway CLI installation
-          railway --version
-          
-          # Deploy backend with project token
-          echo "Deploying backend to staging..."
-          cd backend
-          echo "Using Railway project token for deployment..."
-          railway up --service backend --environment staging
-          
-          # Deploy frontend
-          echo "Deploying frontend to staging..."
-          cd ../frontend
-          railway up --service frontend --environment staging
-          
-          echo "✅ Railway deployment completed"
-
-      - name: Run staging smoke tests
-        run: |
-          echo "Waiting for deployment to stabilize..."
-          sleep 60
-          
-          echo "Testing backend health..."
-          if curl -f https://staging-api-converter.imrajeshkumar7492.dev/api/health; then
-            echo "✅ Backend health check passed"
-          else
-            echo "❌ Backend health check failed"
-            exit 1
-          fi
-          
-          echo "Testing frontend..."
-          if curl -f https://staging-converter.imrajeshkumar7492.dev; then
-            echo "✅ Frontend check passed"
-          else
-            echo "❌ Frontend check failed"
-            exit 1
-          fi
-          
-          echo "🎉 All smoke tests passed!"
-
-  # Deploy to Production
+  # Deploy to Production (Fixed Service Detection)
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
@@ -323,32 +255,34 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          # Check if Railway token is available
           if [ -z "$RAILWAY_TOKEN" ]; then
             echo "❌ RAILWAY_TOKEN secret is not configured"
-            echo "💡 You need a PROJECT token from Railway, not an account token"
-            echo "🔗 Get it from: Railway Dashboard → Project → Settings → Tokens → Create Project Token"
             exit 1
           fi
-          
-          # Install Railway CLI with error handling
+
           echo "Installing Railway CLI..."
-          npm install -g @railway/cli --silent 2>/dev/null || npm install -g @railway/cli
-          
-          # Verify Railway CLI installation
-          railway --version
-          
-          # Deploy backend with project token
-          echo "Deploying backend to production..."
+          npm install -g @railway/cli
+
+          echo "🔍 Fetching Railway services..."
+          railway service list > services.txt
+          cat services.txt
+
+          BACKEND_ID=$(railway service list | grep -i "backend" | awk '{print $1}' | head -n1)
+          FRONTEND_ID=$(railway service list | grep -i "frontend" | awk '{print $1}' | head -n1)
+
+          if [ -z "$BACKEND_ID" ] || [ -z "$FRONTEND_ID" ]; then
+            echo "❌ Could not find matching services in Railway project"
+            exit 1
+          fi
+
+          echo "🚀 Deploying backend ($BACKEND_ID) to production..."
           cd backend
-          echo "Using Railway project token for deployment..."
-          railway up --service backend --environment production
-          
-          # Deploy frontend
-          echo "Deploying frontend to production..."
+          railway up --service $BACKEND_ID --environment production
+
+          echo "🚀 Deploying frontend ($FRONTEND_ID) to production..."
           cd ../frontend
-          railway up --service frontend --environment production
-          
+          railway up --service $FRONTEND_ID --environment production
+
           echo "✅ Railway deployment completed"
 
       - name: Run production smoke tests
@@ -373,64 +307,3 @@ jobs:
           fi
           
           echo "🎉 All smoke tests passed!"
-
-      - name: Log deployment result
-        if: always()
-        run: |
-          echo "🚀 Production deployment process completed!"
-          echo "✅ Deployment artifacts and smoke tests have been executed"
-          echo "📊 Check the logs above for detailed deployment status"
-          echo ""
-          echo "Production URLs:"
-          echo "🌐 Frontend: https://converter.imrajeshkumar7492.dev"
-          echo "🔧 Backend API: https://api-converter.imrajeshkumar7492.dev"
-
-  # GitHub Pages Deployment (Static Demo)
-  deploy-pages:
-    name: Deploy to GitHub Pages
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    concurrency:
-      group: "pages"
-      cancel-in-progress: false
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-
-      - name: Install dependencies
-        run: |
-          cd frontend
-          yarn install --frozen-lockfile
-
-      - name: Build for GitHub Pages
-        run: |
-          cd frontend
-          yarn build
-        env:
-          CI: false
-          REACT_APP_BACKEND_URL: https://api-converter.imrajeshkumar7492.dev
-          PUBLIC_URL: /Converte-into-any-formate
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: frontend/build
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
