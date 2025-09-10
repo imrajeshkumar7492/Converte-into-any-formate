@@ -171,10 +171,15 @@ metadata:
   test_sequence: 2
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "File Upload and Conversion Interface"
+    - "Format Selection and Conversion Process"
+    - "Download Functionality and Toast Notifications"
+    - "Complete Conversion Workflow"
+    - "Edge Cases and Error Handling"
   stuck_tasks: []
   test_all: false
-  test_priority: "completed"
+  test_priority: "high_first"
 
 agent_communication:
     - agent: "testing"
