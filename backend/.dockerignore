@@ -1,0 +1,60 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Test files
+test_*
+*_test.py
+tests/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# Uploads directory content (but keep the directory structure)
+uploads/*
+!uploads/.gitkeep
+
+# Log files
+*.log
+
+# Environment files
+.env.local
+.env.development
+.env.test
+
+# Railway files
+railway.json
+
+# Docker files (avoid recursive Docker builds)
+Dockerfile*
+docker-compose*.yml
