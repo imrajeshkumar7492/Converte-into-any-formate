@@ -315,8 +315,6 @@ jobs:
     environment:
       name: production
       url: https://converter.imrajeshkumar7492.dev
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
