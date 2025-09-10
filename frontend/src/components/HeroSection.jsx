@@ -38,27 +38,58 @@ const HeroSection = () => {
     handleFiles(files);
   };
 
-  const handleFiles = (files) => {
+  const handleFiles = async (files) => {
     if (files.length > 0) {
       setSelectedFiles(files);
+      setIsProcessing(true);
       
-      // Create conversion items for each file
-      const newConversions = Array.from(files).map((file, index) => ({
-        id: Date.now() + index,
-        file: file,
-        originalFormat: file.name.split('.').pop().toUpperCase(),
-        targetFormat: '',
-        status: 'ready', // ready, converting, completed
-        progress: 0
-      }));
-      
-      setConversions(newConversions);
-      setShowConversionInterface(true);
-      
-      toast({
-        title: "Files uploaded successfully!",
-        description: `${files.length} file(s) ready for conversion.`,
-      });
+      try {
+        // Upload files to get supported formats
+        const formData = new FormData();
+        Array.from(files).forEach(file => {
+          formData.append('files', file);
+        });
+
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+
+        const uploadResult = await response.json();
+        
+        // Create conversion items with real supported formats
+        const newConversions = uploadResult.files.map((uploadedFile, index) => ({
+          id: uploadedFile.id,
+          file: files[index],
+          originalFormat: uploadedFile.source_format,
+          targetFormat: '',
+          status: 'ready',
+          progress: 0,
+          supportedFormats: uploadedFile.supported_formats,
+          fileInfo: uploadedFile.file_info
+        }));
+        
+        setConversions(newConversions);
+        setShowConversionInterface(true);
+        
+        toast({
+          title: "Files uploaded successfully!",
+          description: `${files.length} file(s) ready for conversion.`,
+        });
+      } catch (error) {
+        console.error('Upload error:', error);
+        toast({
+          title: "Upload failed",
+          description: "Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
