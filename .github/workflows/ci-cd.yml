@@ -338,14 +338,12 @@ jobs:
           # Deploy backend
           echo "Deploying backend to production..."
           cd backend
-          railway login
-          railway environment production
-          railway up --service backend
+          railway up --service backend --environment production
           
           # Deploy frontend
           echo "Deploying frontend to production..."
           cd ../frontend
-          railway up --service frontend
+          railway up --service frontend --environment production
           
           echo "✅ Railway deployment completed"
 
