@@ -259,6 +259,8 @@ class DocumentConverter:
             except ImportError:
                 # Fallback: Use reportlab to create a simple image representation
                 # This is a basic fallback - not ideal but better than nothing
+                from PIL import Image, ImageDraw, ImageFont
+                
                 input_file.seek(0)
                 reader = PdfReader(input_file)
                 
@@ -267,8 +269,6 @@ class DocumentConverter:
                 text_content = first_page.extract_text()
                 
                 # Create a simple image with the text
-                from PIL import Image, ImageDraw, ImageFont
-                
                 # Create a white image
                 img_width, img_height = 800, 1000
                 image = Image.new('RGB', (img_width, img_height), 'white')
