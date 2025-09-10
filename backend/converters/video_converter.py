@@ -2,7 +2,7 @@ import os
 import io
 import tempfile
 from typing import BinaryIO
-from moviepy import VideoFileClip
+from moviepy.editor import VideoFileClip
 import cv2
 import numpy as np
 from PIL import Image
