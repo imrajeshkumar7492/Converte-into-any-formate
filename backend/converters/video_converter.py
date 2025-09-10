@@ -68,6 +68,14 @@ class VideoConverter:
                 
                 video.close()
                 
+                # Check if output file exists and has content
+                if not os.path.exists(temp_output_path):
+                    raise Exception(f"Output file was not created: {temp_output_path}")
+                
+                file_size = os.path.getsize(temp_output_path)
+                if file_size == 0:
+                    raise Exception(f"Output file is empty: {temp_output_path}")
+                
                 # Read converted file
                 with open(temp_output_path, 'rb') as output_file:
                     return output_file.read()
