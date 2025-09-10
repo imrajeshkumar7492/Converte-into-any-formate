@@ -360,23 +360,29 @@ const HeroSection = () => {
                     </Button>
                   </div>
 
-                  <div className="flex items-center space-x-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                     {/* Original Format */}
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600">From:</span>
-                      <span className="bg-gray-100 px-2 py-1 rounded text-sm font-medium">
+                      <span className="text-sm text-gray-600 whitespace-nowrap">From:</span>
+                      <span className="bg-gray-100 px-3 py-1 rounded-md text-sm font-medium">
                         {conversion.originalFormat}
                       </span>
                     </div>
 
-                    <span className="text-gray-400">→</span>
+                    {/* Arrow - hidden on mobile */}
+                    <div className="hidden md:flex justify-center">
+                      <span className="text-gray-400 text-lg">→</span>
+                    </div>
 
                     {/* Target Format Selection */}
-                    <div className="flex items-center space-x-2 flex-1">
-                      <span className="text-sm text-gray-600">To:</span>
-                      <Select onValueChange={(value) => handleFormatChange(conversion.id, value)}>
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder="Format" />
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600 whitespace-nowrap">To:</span>
+                      <Select 
+                        value={conversion.targetFormat} 
+                        onValueChange={(value) => handleFormatChange(conversion.id, value)}
+                      >
+                        <SelectTrigger className="w-full md:w-32">
+                          <SelectValue placeholder="Choose format" />
                         </SelectTrigger>
                         <SelectContent>
                           {getFormatOptions(conversion.originalFormat).map((format) => (
@@ -388,28 +394,40 @@ const HeroSection = () => {
                       </Select>
                     </div>
 
-                    {/* Status/Progress */}
-                    <div className="text-right min-w-20">
-                      {conversion.status === 'ready' && (
-                        <span className="text-sm text-gray-500">Ready</span>
-                      )}
-                      {conversion.status === 'converting' && (
-                        <div className="space-y-1">
-                          <div className="text-sm text-blue-600">Converting...</div>
-                          <div className="w-16 bg-blue-200 rounded-full h-1">
-                            <div 
-                              className="bg-blue-500 h-1 rounded-full transition-all duration-300"
-                              style={{ width: `${conversion.progress}%` }}
-                            ></div>
+                    {/* Status/Progress and Download */}
+                    <div className="flex items-center justify-between md:justify-end space-x-2">
+                      <div className="flex-1 md:flex-none">
+                        {conversion.status === 'ready' && (
+                          <span className="text-sm text-gray-500">Ready</span>
+                        )}
+                        {conversion.status === 'converting' && (
+                          <div className="space-y-1">
+                            <div className="text-sm text-blue-600">Converting...</div>
+                            <div className="w-20 bg-blue-200 rounded-full h-2">
+                              <div 
+                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${conversion.progress}%` }}
+                              ></div>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {conversion.status === 'completed' && (
-                        <div className="flex items-center space-x-1 text-green-600">
-                          <Check className="w-4 h-4" />
-                          <span className="text-sm">Complete</span>
-                        </div>
-                      )}
+                        )}
+                        {conversion.status === 'completed' && (
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1 text-green-600">
+                              <Check className="w-4 h-4" />
+                              <span className="text-sm">Complete</span>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => handleDownload(conversion.id)}
+                              className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-xs"
+                            >
+                              <Download className="w-3 h-3 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
