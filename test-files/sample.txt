@@ -1,0 +1,6 @@
+This is a sample text file for load testing the file converter application.
+It contains some basic content that can be used to test file upload functionality.
+
+The file converter should be able to handle this file and convert it to various formats like PDF, DOC, etc.
+
+This file is used by the Artillery load testing configuration to simulate real file uploads during performance testing.
