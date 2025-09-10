@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the FreeConvert clone functionality including header navigation, file upload, interactive elements, content verification, and UI/UX elements"
+user_problem_statement: "Test the updated FreeConvert clone with the new file conversion interface including file upload showing conversion interface, format selection, conversion process, download functionality, and complete workflow testing"
 
 frontend:
   - task: "Header Navigation Dropdowns"
