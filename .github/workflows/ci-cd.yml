@@ -253,6 +253,12 @@ jobs:
 
       - name: Deploy to Railway (Staging)
         run: |
+          # Check if Railway token is available
+          if [ -z "${{ secrets.RAILWAY_TOKEN }}" ]; then
+            echo "❌ RAILWAY_TOKEN secret is not configured"
+            exit 1
+          fi
+          
           # Install Railway CLI with error handling
           echo "Installing Railway CLI..."
           npm install -g @railway/cli --silent 2>/dev/null || npm install -g @railway/cli
