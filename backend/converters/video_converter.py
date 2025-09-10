@@ -41,30 +41,42 @@ class VideoConverter:
                 
                 codec = codec_map.get(target_format.lower(), 'libx264')
                 
-                # Convert video
-                if target_format.lower() == 'webm':
-                    video.write_videofile(
-                        temp_output_path,
-                        codec=codec,
-                        audio_codec='libvorbis',
-                        temp_audiofile='temp-audio.m4a',
-                        remove_temp=True
-                    )
-                elif target_format.lower() == 'ogv':
-                    video.write_videofile(
-                        temp_output_path,
-                        codec=codec,
-                        audio_codec='libvorbis',
-                        temp_audiofile='temp-audio.ogg',
-                        remove_temp=True
-                    )
-                else:
-                    video.write_videofile(
-                        temp_output_path,
-                        codec=codec,
-                        temp_audiofile='temp-audio.m4a',
-                        remove_temp=True
-                    )
+                # Convert video with simpler approach
+                try:
+                    if target_format.lower() == 'avi':
+                        # For AVI, use a more compatible approach
+                        video.write_videofile(
+                            temp_output_path,
+                            codec='libx264',
+                            audio_codec='aac',
+                            temp_audiofile='temp-audio.m4a',
+                            remove_temp=True
+                        )
+                    elif target_format.lower() == 'webm':
+                        video.write_videofile(
+                            temp_output_path,
+                            codec='libvpx',
+                            audio_codec='libvorbis',
+                            temp_audiofile='temp-audio.m4a',
+                            remove_temp=True
+                        )
+                    elif target_format.lower() == 'ogv':
+                        video.write_videofile(
+                            temp_output_path,
+                            codec='libtheora',
+                            audio_codec='libvorbis',
+                            temp_audiofile='temp-audio.ogg',
+                            remove_temp=True
+                        )
+                    else:
+                        video.write_videofile(
+                            temp_output_path,
+                            codec=codec,
+                            temp_audiofile='temp-audio.m4a',
+                            remove_temp=True
+                        )
+                except Exception as write_error:
+                    raise Exception(f"MoviePy write_videofile failed: {str(write_error)}")
                 
                 video.close()
                 
