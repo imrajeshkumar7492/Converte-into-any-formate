@@ -1,0 +1,77 @@
+name: Performance Monitoring
+
+on:
+  schedule:
+    # Run performance tests every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  performance-test:
+    name: Performance Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@0.12.x
+
+      - name: Run Lighthouse CI (Production)
+        run: |
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          LHCI_SERVER_URL: https://converter.imrajeshkumar7492.dev
+
+      - name: Performance test with Artillery
+        run: |
+          npm install -g artillery@latest
+          artillery run .github/artillery/load-test.yml --output performance-report.json
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results-${{ github.run_number }}
+          path: |
+            performance-report.json
+            lighthouseci-report.json
+
+      - name: Create performance issue on regression
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { performance } = require('./performance-report.json');
+            
+            if (performance.responseTime.avg > 2000) { // 2 seconds threshold
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '⚠️ Performance Regression Detected',
+                body: `
+                  ## Performance Alert
+                  
+                  Performance regression detected in production environment.
+                  
+                  **Average Response Time:** ${performance.responseTime.avg}ms (threshold: 2000ms)
+                  **Test Date:** ${new Date().toISOString()}
+                  **Workflow Run:** ${{ github.run_id }}
+                  
+                  Please investigate and optimize performance issues.
+                  
+                  ### Metrics:
+                  - Response Time: ${performance.responseTime.avg}ms
+                  - Error Rate: ${performance.errors}%
+                  - Throughput: ${performance.rps} req/sec
+                `,
+                labels: ['performance', 'investigation-needed']
+              });
+            }

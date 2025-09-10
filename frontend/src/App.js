@@ -1,35 +1,17 @@
 import React from "react";
 import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Header from "./components/Header";
-import HeroSection from "./components/HeroSection";
-import FeaturesSection from "./components/FeaturesSection";
-import PopularConverters from "./components/PopularConverters";
-import Footer from "./components/Footer";
+import IframeHeroSection from "./components/IframeHeroSection";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/toaster";
-
-const Home = () => {
-  return (
-    <div className="min-h-screen bg-white">
-      <Header />
-      <HeroSection />
-      <FeaturesSection />
-      <PopularConverters />
-      <Footer />
-    </div>
-  );
-};
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-        </Routes>
-      </BrowserRouter>
-      <Toaster />
-    </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <IframeHeroSection />
+        <Toaster />
+      </div>
+    </ErrorBoundary>
   );
 }
 

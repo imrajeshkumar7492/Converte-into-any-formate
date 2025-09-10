@@ -1,0 +1,28 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "sleepApplication": false,
+    "restartPolicyType": "ON_FAILURE",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "REACT_APP_BACKEND_URL": "https://api-converter.imrajeshkumar7492.dev",
+        "REACT_APP_ENVIRONMENT": "production"
+      }
+    },
+    "staging": {
+      "variables": {
+        "REACT_APP_BACKEND_URL": "https://staging-api-converter.imrajeshkumar7492.dev",
+        "REACT_APP_ENVIRONMENT": "staging"
+      }
+    }
+  }
+}

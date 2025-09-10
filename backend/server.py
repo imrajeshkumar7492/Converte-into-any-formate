@@ -14,6 +14,10 @@ import io
 import tempfile
 import asyncio
 from converters.converter_manager import ConversionManager
+from utils.cache import cache
+
+# Initialize conversion manager
+conversion_manager = ConversionManager()
 
 
 ROOT_DIR = Path(__file__).parent
@@ -127,7 +131,12 @@ async def upload_files(files: List[UploadFile] = File(...)):
 @api_router.post("/convert")
 async def convert_file(
     file: UploadFile = File(...),
-    target_format: str = Form(...)
+    target_format: str = Form(...),
+    image_quality: int = Form(95),
+    max_width: int = Form(None),
+    max_height: int = Form(None),
+    compression_level: str = Form("high"),
+    preserve_metadata: bool = Form(True)
 ):
     """Convert a single file to target format"""
     try:
@@ -157,10 +166,20 @@ async def convert_file(
         
         # Perform conversion
         try:
+            # Create conversion options
+            conversion_options = {
+                'image_quality': image_quality,
+                'max_width': max_width,
+                'max_height': max_height,
+                'compression_level': compression_level,
+                'preserve_metadata': preserve_metadata
+            }
+            
             converted_data = ConversionManager.convert_file(
                 io.BytesIO(content), 
                 source_format, 
-                target_format.lower()
+                target_format.lower(),
+                **conversion_options
             )
             
             # Update job status
@@ -253,16 +272,76 @@ async def convert_batch(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Batch conversion failed: {str(e)}")
 
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for deployment monitoring"""
+    try:
+        # Test database connection
+        db_status = "healthy"
+        try:
+            # Test MongoDB connection
+            await db.list_collection_names()
+        except Exception as e:
+            db_status = f"unhealthy: {str(e)}"
+        
+        # Test conversion system
+        conversion_status = "healthy"
+        try:
+            test_formats = conversion_manager.get_supported_formats("JPG")
+            if not test_formats:
+                conversion_status = "unhealthy: no supported formats"
+        except Exception as e:
+            conversion_status = f"unhealthy: {str(e)}"
+        
+        health_data = {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0",
+            "environment": os.environ.get("ENVIRONMENT", "development"),
+            "services": {
+                "database": db_status,
+                "conversion_engine": conversion_status,
+                "api": "healthy"
+            }
+        }
+        
+        # Return 503 if any service is unhealthy
+        if "unhealthy" in str(health_data):
+            raise HTTPException(status_code=503, detail=health_data)
+            
+        return health_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise HTTPException(status_code=503, detail={
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
 @api_router.get("/supported-formats/{source_format}")
 async def get_supported_formats(source_format: str):
-    """Get supported target formats for a source format"""
+    """Get supported target formats for a given source format"""
     try:
-        supported = ConversionManager.get_supported_formats(source_format.lower())
+        # Normalize the format
+        source_format = source_format.upper()
+        
+        # Get supported formats from the conversion manager
+        supported_formats = conversion_manager.get_supported_formats(source_format)
+        
+        if not supported_formats:
+            raise HTTPException(status_code=404, detail=f"No supported formats found for {source_format}")
+        
         return {
-            "source_format": source_format.upper(),
-            "supported_formats": [f.upper() for f in supported]
+            "source_format": source_format,
+            "supported_formats": supported_formats,
+            "count": len(supported_formats)
         }
+        
     except Exception as e:
+        logger.error(f"Error getting supported formats for {source_format}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get supported formats: {str(e)}")
 
 @api_router.get("/conversion-jobs")
@@ -304,6 +383,29 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@api_router.get("/cache/stats")
+async def get_cache_stats():
+    """Get cache statistics"""
+    try:
+        stats = cache.get_stats()
+        return {
+            "cache_stats": stats,
+            "message": "Cache statistics retrieved successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cache stats: {str(e)}")
+
+@api_router.post("/cache/clear")
+async def clear_cache():
+    """Clear the conversion cache"""
+    try:
+        cache.clear()
+        return {
+            "message": "Cache cleared successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

@@ -56,51 +56,163 @@ class DocumentConverter:
     
     @staticmethod
     def convert_docx_to_pdf(input_file: BinaryIO) -> bytes:
-        """Convert DOCX to PDF using reportlab"""
+        """Convert DOCX to PDF with advanced formatting preservation"""
         try:
+            # Try using python-docx2pdf first (better formatting preservation)
+            try:
+                from docx2pdf import convert
+                import tempfile
+                import os
+                
+                input_file.seek(0)
+                
+                # Create temporary files
+                with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as temp_docx:
+                    temp_docx.write(input_file.read())
+                    temp_docx_path = temp_docx.name
+                
+                with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+                    temp_pdf_path = temp_pdf.name
+                
+                try:
+                    # Convert using docx2pdf (preserves formatting better)
+                    convert(temp_docx_path, temp_pdf_path)
+                    
+                    # Read the converted PDF
+                    with open(temp_pdf_path, 'rb') as pdf_file:
+                        pdf_content = pdf_file.read()
+                    
+                    return pdf_content
+                    
+                finally:
+                    # Clean up temporary files
+                    for path in [temp_docx_path, temp_pdf_path]:
+                        if os.path.exists(path):
+                            os.unlink(path)
+                            
+            except ImportError:
+                # Fallback to advanced reportlab conversion
+                return DocumentConverter._convert_docx_to_pdf_advanced(input_file)
+                
+        except Exception as e:
+            raise Exception(f"DOCX to PDF conversion failed: {str(e)}")
+    
+    @staticmethod
+    def _convert_docx_to_pdf_advanced(input_file: BinaryIO) -> bytes:
+        """Advanced DOCX to PDF conversion with better formatting preservation"""
+        try:
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import letter, A4
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage
+            from reportlab.lib.units import inch
+            from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT, TA_JUSTIFY
+            from docx.shared import Inches
+            import tempfile
+            import os
+            
             input_file.seek(0)
             doc = Document(input_file)
             
             output_buffer = io.BytesIO()
-            c = canvas.Canvas(output_buffer, pagesize=letter)
-            width, height = letter
+            doc_pdf = SimpleDocTemplate(output_buffer, pagesize=A4, 
+                                      rightMargin=72, leftMargin=72, 
+                                      topMargin=72, bottomMargin=18)
             
-            y = height - 50  # Start from top with margin
+            # Define styles
+            styles = getSampleStyleSheet()
+            
+            # Create custom styles based on document formatting
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=16,
+                spaceAfter=12,
+                alignment=TA_CENTER
+            )
+            
+            heading_style = ParagraphStyle(
+                'CustomHeading',
+                parent=styles['Heading2'],
+                fontSize=14,
+                spaceAfter=8,
+                alignment=TA_LEFT
+            )
+            
+            normal_style = ParagraphStyle(
+                'CustomNormal',
+                parent=styles['Normal'],
+                fontSize=11,
+                spaceAfter=6,
+                alignment=TA_JUSTIFY
+            )
+            
+            # Build content
+            story = []
             
             for paragraph in doc.paragraphs:
                 text = paragraph.text.strip()
-                if text:
-                    # Simple text wrapping
-                    words = text.split()
-                    line = ""
-                    for word in words:
-                        test_line = line + word + " "
-                        if len(test_line) * 6 > width - 100:  # Rough character width estimation
-                            if line:
-                                c.drawString(50, y, line.strip())
-                                y -= 15
-                                line = word + " "
+                if not text:
+                    story.append(Spacer(1, 6))
+                    continue
+                
+                # Determine style based on paragraph properties
+                if paragraph.style.name.startswith('Title'):
+                    story.append(Paragraph(text, title_style))
+                elif paragraph.style.name.startswith('Heading'):
+                    story.append(Paragraph(text, heading_style))
+                else:
+                    # Check for bold/italic formatting
+                    if paragraph.runs:
+                        formatted_text = ""
+                        for run in paragraph.runs:
+                            if run.bold and run.italic:
+                                formatted_text += f"<b><i>{run.text}</i></b>"
+                            elif run.bold:
+                                formatted_text += f"<b>{run.text}</b>"
+                            elif run.italic:
+                                formatted_text += f"<i>{run.text}</i>"
                             else:
-                                c.drawString(50, y, word)
-                                y -= 15
-                        else:
-                            line = test_line
-                    
-                    if line.strip():
-                        c.drawString(50, y, line.strip())
-                        y -= 15
-                    
-                    y -= 5  # Extra space between paragraphs
-                    
-                    # Check if we need a new page
-                    if y < 50:
-                        c.showPage()
-                        y = height - 50
+                                formatted_text += run.text
+                        story.append(Paragraph(formatted_text, normal_style))
+                    else:
+                        story.append(Paragraph(text, normal_style))
+                
+                story.append(Spacer(1, 6))
             
-            c.save()
+            # Handle tables
+            for table in doc.tables:
+                from reportlab.platypus import Table, TableStyle
+                from reportlab.lib import colors
+                
+                table_data = []
+                for row in table.rows:
+                    row_data = []
+                    for cell in row.cells:
+                        row_data.append(cell.text.strip())
+                    table_data.append(row_data)
+                
+                if table_data:
+                    table_obj = Table(table_data)
+                    table_obj.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 10),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                    ]))
+                    story.append(table_obj)
+                    story.append(Spacer(1, 12))
+            
+            # Build PDF
+            doc_pdf.build(story)
             return output_buffer.getvalue()
+            
         except Exception as e:
-            raise Exception(f"DOCX to PDF conversion failed: {str(e)}")
+            raise Exception(f"Advanced DOCX to PDF conversion failed: {str(e)}")
     
     @staticmethod
     def convert_docx_to_txt(input_file: BinaryIO) -> bytes:
@@ -210,7 +322,7 @@ class DocumentConverter:
     
     @staticmethod
     def convert_pdf_to_image(input_file: BinaryIO, target_format: str = 'png') -> bytes:
-        """Convert PDF to image (JPG/PNG) - handles multi-page PDFs by converting first page"""
+        """Convert PDF to image (JPG/PNG) - supports multi-page PDFs by creating a combined image"""
         try:
             # Try using PyMuPDF (fitz) first - better for PDF to image conversion
             try:
@@ -223,17 +335,46 @@ class DocumentConverter:
                 # Open PDF with PyMuPDF
                 pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
                 
-                # Get first page (for now, we'll convert only the first page)
-                # TODO: In future, could create multi-page image or ZIP of images
-                page = pdf_document[0]
+                # Get all pages
+                num_pages = len(pdf_document)
+                if num_pages == 0:
+                    raise Exception("PDF has no pages")
                 
-                # Render page to image
-                mat = fitz.Matrix(2.0, 2.0)  # 2x zoom for better quality
-                pix = page.get_pixmap(matrix=mat)
-                
-                # Convert to PIL Image
-                img_data = pix.tobytes("png")
-                image = Image.open(io.BytesIO(img_data))
+                # For single page, convert directly
+                if num_pages == 1:
+                    page = pdf_document[0]
+                    mat = fitz.Matrix(2.0, 2.0)  # 2x zoom for better quality
+                    pix = page.get_pixmap(matrix=mat)
+                    img_data = pix.tobytes("png")
+                    image = Image.open(io.BytesIO(img_data))
+                else:
+                    # For multi-page PDFs, create a combined image
+                    images = []
+                    max_width = 0
+                    total_height = 0
+                    
+                    for page_num in range(num_pages):
+                        page = pdf_document[page_num]
+                        mat = fitz.Matrix(2.0, 2.0)  # 2x zoom for better quality
+                        pix = page.get_pixmap(matrix=mat)
+                        img_data = pix.tobytes("png")
+                        page_image = Image.open(io.BytesIO(img_data))
+                        images.append(page_image)
+                        
+                        max_width = max(max_width, page_image.width)
+                        total_height += page_image.height
+                    
+                    # Create combined image
+                    combined_image = Image.new('RGB', (max_width, total_height), 'white')
+                    y_offset = 0
+                    
+                    for page_image in images:
+                        # Center the page image if it's narrower than max_width
+                        x_offset = (max_width - page_image.width) // 2
+                        combined_image.paste(page_image, (x_offset, y_offset))
+                        y_offset += page_image.height
+                    
+                    image = combined_image
                 
                 # Convert to target format
                 output_buffer = io.BytesIO()
@@ -330,3 +471,62 @@ class DocumentConverter:
     def convert_pdf_to_png(input_file: BinaryIO) -> bytes:
         """Convert PDF to PNG"""
         return DocumentConverter.convert_pdf_to_image(input_file, 'png')
+    
+    @staticmethod
+    def convert_pdf_to_images_zip(input_file: BinaryIO, target_format: str = 'png') -> bytes:
+        """Convert PDF to ZIP file containing individual page images"""
+        try:
+            import fitz  # PyMuPDF
+            from PIL import Image
+            import zipfile
+            
+            input_file.seek(0)
+            pdf_data = input_file.read()
+            
+            # Open PDF with PyMuPDF
+            pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
+            num_pages = len(pdf_document)
+            
+            if num_pages == 0:
+                raise Exception("PDF has no pages")
+            
+            # Create ZIP file in memory
+            zip_buffer = io.BytesIO()
+            
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for page_num in range(num_pages):
+                    page = pdf_document[page_num]
+                    mat = fitz.Matrix(2.0, 2.0)  # 2x zoom for better quality
+                    pix = page.get_pixmap(matrix=mat)
+                    img_data = pix.tobytes("png")
+                    page_image = Image.open(io.BytesIO(img_data))
+                    
+                    # Convert to target format
+                    img_buffer = io.BytesIO()
+                    
+                    if target_format.lower() in ['jpg', 'jpeg']:
+                        if page_image.mode in ['RGBA', 'LA']:
+                            background = Image.new('RGB', page_image.size, (255, 255, 255))
+                            if page_image.mode == 'RGBA':
+                                background.paste(page_image, mask=page_image.split()[-1])
+                            else:
+                                background.paste(page_image)
+                            page_image = background
+                        elif page_image.mode != 'RGB':
+                            page_image = page_image.convert('RGB')
+                        
+                        page_image.save(img_buffer, format='JPEG', quality=95, optimize=True)
+                    else:  # PNG
+                        if page_image.mode != 'RGBA':
+                            page_image = page_image.convert('RGBA')
+                        page_image.save(img_buffer, format='PNG', optimize=True)
+                    
+                    # Add to ZIP
+                    filename = f"page_{page_num + 1}.{target_format.lower()}"
+                    zip_file.writestr(filename, img_buffer.getvalue())
+            
+            pdf_document.close()
+            return zip_buffer.getvalue()
+            
+        except Exception as e:
+            raise Exception(f"PDF to images ZIP conversion failed: {str(e)}")
