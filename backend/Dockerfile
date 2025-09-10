@@ -14,19 +14,16 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Create app user
-RUN adduser --disabled-password --gecos '' appuser
+# Create virtual environment instead of using --user
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Set work directory
 WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
-# Switch to appuser to create .local directory properly
-USER appuser
-RUN pip install --user -r requirements.txt
-# Switch back to root for remaining setup
-USER root
+RUN pip install -r requirements.txt
 
 # Production stage
 FROM python:3.11-slim
@@ -34,11 +31,12 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH=/home/appuser/.local/bin:$PATH
+    PATH="/opt/venv/bin:$PATH"
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
@@ -48,7 +46,7 @@ RUN adduser --disabled-password --gecos '' appuser
 WORKDIR /app
 
 # Copy Python dependencies from builder stage
-COPY --from=builder /home/appuser/.local /home/appuser/.local
+COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
 COPY --chown=appuser:appuser . .
