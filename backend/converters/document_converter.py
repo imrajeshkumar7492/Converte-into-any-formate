@@ -214,6 +214,9 @@ class DocumentConverter:
         try:
             # Try using PyMuPDF (fitz) first - better for PDF to image conversion
             try:
+                import fitz  # PyMuPDF
+                from PIL import Image
+                
                 input_file.seek(0)
                 pdf_data = input_file.read()
                 
@@ -256,7 +259,7 @@ class DocumentConverter:
                 pdf_document.close()
                 return output_buffer.getvalue()
                 
-            except ImportError:
+            except (ImportError, Exception) as e:
                 # Fallback: Use reportlab to create a simple image representation
                 # This is a basic fallback - not ideal but better than nothing
                 from PIL import Image, ImageDraw, ImageFont
