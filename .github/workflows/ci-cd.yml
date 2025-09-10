@@ -11,6 +11,8 @@ permissions:
   packages: write
   security-events: write
   actions: read
+  pages: write
+  id-token: write
 
 env:
   REGISTRY: ghcr.io
@@ -18,7 +20,9 @@ env:
   IMAGE_NAME_FRONTEND: ${{ github.repository }}-frontend
 
 jobs:
+  # -------------------------------
   # Security and Code Quality Checks
+  # -------------------------------
   security-scan:
     name: Security & Code Quality
     runs-on: ubuntu-latest
@@ -78,7 +82,9 @@ jobs:
             safety-report.json
             frontend/npm-audit.json
 
+  # -------------------------------
   # Test Suite
+  # -------------------------------
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -146,7 +152,9 @@ jobs:
             backend/pytest-report.xml
             frontend/coverage/
 
+  # -------------------------------
   # Build Docker Images
+  # -------------------------------
   build:
     name: Build Docker Images
     runs-on: ubuntu-latest
@@ -178,15 +186,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Docker build info
-        run: |
-          echo "Building Docker images..."
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "✅ Will PUSH images to registry (main branch)"
-          else
-            echo "🔨 Will only BUILD images (PR or non-main branch)"
-          fi
 
       - name: Extract backend metadata
         id: backend-meta
@@ -229,7 +228,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          platforms: linux/amd64  
+          platforms: linux/amd64
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.frontend-meta.outputs.tags }}
           labels: ${{ steps.frontend-meta.outputs.labels }}
@@ -238,59 +237,136 @@ jobs:
           build-args: |
             BUILDKIT_INLINE_CACHE=1
 
-  # Deploy to Railway (shared step)
-  deploy-template:
-    name: Deploy to Railway
+  # -------------------------------
+  # Deploy to Staging
+  # -------------------------------
+  deploy-staging:
+    name: Deploy to Staging
     runs-on: ubuntu-latest
     needs: build
-    strategy:
-      matrix:
-        env: [staging, production]
-    if: >
-      (matrix.env == 'staging' && github.ref == 'refs/heads/develop') ||
-      (matrix.env == 'production' && github.ref == 'refs/heads/main')
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging-converter.imrajeshkumar7492.dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Verify Railway Token
+      - name: Deploy to Railway (Staging)
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          BACKEND_SERVICE: ${{ secrets.RAILWAY_BACKEND_SERVICE }}
+          FRONTEND_SERVICE: ${{ secrets.RAILWAY_FRONTEND_SERVICE }}
         run: |
           if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ Missing Railway project token"
+            echo "❌ Missing RAILWAY_TOKEN"
             exit 1
           fi
-          railway whoami || true
-          railway status || true
-          railway service list || true
 
-      - name: Deploy Backend & Frontend
+          npm install -g @railway/cli
+          railway --version
+
+          echo "Deploying backend to staging..."
+          cd backend
+          railway up --service $BACKEND_SERVICE --environment staging
+
+          echo "Deploying frontend to staging..."
+          cd ../frontend
+          railway up --service $FRONTEND_SERVICE --environment staging
+
+      - name: Run staging smoke tests
+        run: |
+          sleep 60
+          curl -f https://staging-api-converter.imrajeshkumar7492.dev/api/health
+          curl -f https://staging-converter.imrajeshkumar7492.dev
+
+  # -------------------------------
+  # Deploy to Production
+  # -------------------------------
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://converter.imrajeshkumar7492.dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Railway (Production)
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          BACKEND_SERVICE: ${{ secrets.RAILWAY_BACKEND_SERVICE }}
+          FRONTEND_SERVICE: ${{ secrets.RAILWAY_FRONTEND_SERVICE }}
         run: |
-          echo "🚀 Deploying to Railway: ${{ matrix.env }}"
-
-          BACKEND_ID=$(railway service list --json | jq -r '.services[] | select(.name | test("backend"; "i")) | .id')
-          FRONTEND_ID=$(railway service list --json | jq -r '.services[] | select(.name | test("frontend"; "i")) | .id')
-
-          if [ -z "$BACKEND_ID" ] || [ -z "$FRONTEND_ID" ]; then
-            echo "❌ Could not find backend/frontend service IDs"
-            railway service list
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "❌ Missing RAILWAY_TOKEN"
             exit 1
           fi
 
-          echo "Deploying backend ($BACKEND_ID)..."
+          npm install -g @railway/cli
+          railway --version
+
+          echo "Deploying backend to production..."
           cd backend
-          railway up --service $BACKEND_ID --environment ${{ matrix.env }}
-          cd ..
+          railway up --service $BACKEND_SERVICE --environment production
 
-          echo "Deploying frontend ($FRONTEND_ID)..."
+          echo "Deploying frontend to production..."
+          cd ../frontend
+          railway up --service $FRONTEND_SERVICE --environment production
+
+      - name: Run production smoke tests
+        run: |
+          sleep 60
+          curl -f https://api-converter.imrajeshkumar7492.dev/api/health
+          curl -f https://converter.imrajeshkumar7492.dev
+
+  # -------------------------------
+  # Deploy to GitHub Pages
+  # -------------------------------
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: |
           cd frontend
-          railway up --service $FRONTEND_ID --environment ${{ matrix.env }}
-          cd ..
+          yarn install --frozen-lockfile
 
-          echo "✅ Railway deployment completed for ${{ matrix.env }}"
+      - name: Build for GitHub Pages
+        run: |
+          cd frontend
+          yarn build
+        env:
+          CI: false
+          REACT_APP_BACKEND_URL: https://api-converter.imrajeshkumar7492.dev
+          PUBLIC_URL: /Converte-into-any-formate
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/build
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
