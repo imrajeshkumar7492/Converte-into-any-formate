@@ -172,11 +172,21 @@ jobs:
           docker buildx prune -f --filter until=24h || true
 
       - name: Log in to Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker build info
+        run: |
+          echo "Building Docker images..."
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "✅ Will PUSH images to registry (main branch)"
+          else
+            echo "🔨 Will only BUILD images (PR or non-main branch)"
+          fi
 
       - name: Extract backend metadata
         id: backend-meta
