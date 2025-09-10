@@ -42,29 +42,24 @@ const HeroSection = () => {
   const handleFiles = (files) => {
     if (files.length > 0) {
       setSelectedFiles(files);
+      
+      // Create conversion items for each file
+      const newConversions = Array.from(files).map((file, index) => ({
+        id: Date.now() + index,
+        file: file,
+        originalFormat: file.name.split('.').pop().toUpperCase(),
+        targetFormat: '',
+        status: 'ready', // ready, converting, completed
+        progress: 0
+      }));
+      
+      setConversions(newConversions);
+      setShowConversionInterface(true);
+      
       toast({
         title: "Files uploaded successfully!",
         description: `${files.length} file(s) ready for conversion.`,
       });
-      
-      // Mock conversion process
-      setIsProcessing(true);
-      setProcessingStep(0);
-      
-      const interval = setInterval(() => {
-        setProcessingStep(prev => {
-          if (prev >= mockConversionProcess.steps.length - 1) {
-            clearInterval(interval);
-            setIsProcessing(false);
-            toast({
-              title: "Conversion Complete!",
-              description: "Your files have been converted successfully.",
-            });
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, mockConversionProcess.duration / mockConversionProcess.steps.length);
     }
   };
 
