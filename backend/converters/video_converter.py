@@ -48,9 +48,7 @@ class VideoConverter:
                         codec=codec,
                         audio_codec='libvorbis',
                         temp_audiofile='temp-audio.m4a',
-                        remove_temp=True,
-                        verbose=False,
-                        logger=None
+                        remove_temp=True
                     )
                 elif target_format.lower() == 'ogv':
                     video.write_videofile(
@@ -58,18 +56,14 @@ class VideoConverter:
                         codec=codec,
                         audio_codec='libvorbis',
                         temp_audiofile='temp-audio.ogg',
-                        remove_temp=True,
-                        verbose=False,
-                        logger=None
+                        remove_temp=True
                     )
                 else:
                     video.write_videofile(
                         temp_output_path,
                         codec=codec,
                         temp_audiofile='temp-audio.m4a',
-                        remove_temp=True,
-                        verbose=False,
-                        logger=None
+                        remove_temp=True
                     )
                 
                 video.close()
