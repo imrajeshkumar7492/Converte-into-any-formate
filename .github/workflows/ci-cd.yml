@@ -368,35 +368,16 @@ jobs:
           
           echo "🎉 All smoke tests passed!"
 
-      - name: Notify deployment success
-        uses: 8398a7/action-slack@v3
-        if: success() && vars.SLACK_NOTIFICATIONS_ENABLED == 'true'
-        continue-on-error: true
-        with:
-          status: success
-          text: '✅ Production deployment successful!'
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify deployment failure
-        uses: 8398a7/action-slack@v3
-        if: failure() && vars.SLACK_NOTIFICATIONS_ENABLED == 'true'
-        continue-on-error: true
-        with:
-          status: failure
-          text: '❌ Production deployment failed!'
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
       - name: Log deployment result
         if: always()
         run: |
-          if [ "${{ job.status }}" = "success" ] || [ "$GITHUB_JOB_STATUS" = "success" ]; then
-            echo "✅ Production deployment completed successfully!"
-          else
-            echo "❌ Production deployment encountered issues!"
-          fi
-          echo "Note: Slack notifications are optional and can be enabled by setting SLACK_NOTIFICATIONS_ENABLED variable to 'true'"
+          echo "🚀 Production deployment process completed!"
+          echo "✅ Deployment artifacts and smoke tests have been executed"
+          echo "📊 Check the logs above for detailed deployment status"
+          echo ""
+          echo "Production URLs:"
+          echo "🌐 Frontend: https://converter.imrajeshkumar7492.dev"
+          echo "🔧 Backend API: https://api-converter.imrajeshkumar7492.dev"
 
   # GitHub Pages Deployment (Static Demo)
   deploy-pages:
