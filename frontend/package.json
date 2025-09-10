@@ -2,7 +2,14 @@
   "name": "file-converter-iframe",
   "version": "1.0.0",
   "private": true,
-  "homepage": ".",
+  "homepage": "/Converte-into-any-formate",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imrajeshkumar7492/Converte-into-any-formate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/imrajeshkumar7492/Converte-into-any-formate/issues"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.8",
