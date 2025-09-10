@@ -6,7 +6,9 @@ from .document_converter import DocumentConverter
 from .advanced_document_converter import AdvancedDocumentConverter
 from .audio_converter import AudioConverter
 from .video_converter import VideoConverter
-from ..utils.cache import cache
+import sys
+sys.path.append('/app/backend')
+from utils.cache import cache
 
 class ConversionManager:
     """Main conversion manager that routes conversions to appropriate converters"""
