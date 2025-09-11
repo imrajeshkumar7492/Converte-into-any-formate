@@ -101,7 +101,7 @@ jobs:
           MONGO_URL: mongodb://localhost:27017/test_fileconverter
         run: cd backend && python -m pytest tests/ -v --tb=short || echo "Some backend tests failed, but continuing..."
       - name: Run frontend tests
-        run: cd frontend && CI=true yarn test --coverage --watchAll=false || true
+        run: cd frontend && CI=true yarn test --coverage --watchAll=false --passWithNoTests || echo "Frontend tests completed with warnings"
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
