@@ -208,16 +208,20 @@ jobs:
           fi
           npm install -g @railway/cli
           railway --version
+          echo "Authenticating with Railway..."
+          railway auth login --token "$RAILWAY_TOKEN"
           echo "Deploying backend to staging..."
           cd backend
           export RAILWAY_PROJECT_ID="10b65955-d74c-46a7-930a-05a590867ac9"
           export RAILWAY_ENVIRONMENT="staging"
+          railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" || echo "Link failed, trying direct deployment"
           railway up --detach
           cd ..
           echo "Deploying frontend to staging..."
           cd frontend
           export RAILWAY_PROJECT_ID="10b65955-d74c-46a7-930a-05a590867ac9"
           export RAILWAY_ENVIRONMENT="staging"
+          railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" || echo "Link failed, trying direct deployment"
           railway up --detach
           cd ..
       - name: Run staging smoke tests
