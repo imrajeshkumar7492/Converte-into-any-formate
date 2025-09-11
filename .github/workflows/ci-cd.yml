@@ -255,7 +255,6 @@ jobs:
           fi
           npm install -g @railway/cli
           railway --version
-          railway login --token "$RAILWAY_TOKEN"
           echo "Deploying backend to production..."
           cd backend
           export RAILWAY_PROJECT_ID="10b65955-d74c-46a7-930a-05a590867ac9"
