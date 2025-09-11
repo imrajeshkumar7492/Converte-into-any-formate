@@ -49,9 +49,27 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { performance } = require('./performance-report.json');
+            const fs = require('fs');
+            const path = './performance-report.json';
             
-            if (performance.responseTime.avg > 2000) { // 2 seconds threshold
+            if (!fs.existsSync(path)) {
+              console.log('Performance report not found, skipping issue creation');
+              return;
+            }
+            
+            let performance;
+            try {
+              const reportData = fs.readFileSync(path, 'utf8');
+              const report = JSON.parse(reportData);
+              performance = report.aggregate || report.performance || {};
+            } catch (error) {
+              console.log('Error parsing performance report:', error.message);
+              return;
+            }
+            
+            const avgResponseTime = performance.latency?.mean || performance.responseTime?.avg || 0;
+            
+            if (avgResponseTime > 2000) { // 2 seconds threshold
               github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -61,16 +79,16 @@ jobs:
                   
                   Performance regression detected in production environment.
                   
-                  **Average Response Time:** ${performance.responseTime.avg}ms (threshold: 2000ms)
+                  **Average Response Time:** ${avgResponseTime}ms (threshold: 2000ms)
                   **Test Date:** ${new Date().toISOString()}
                   **Workflow Run:** ${{ github.run_id }}
                   
                   Please investigate and optimize performance issues.
                   
                   ### Metrics:
-                  - Response Time: ${performance.responseTime.avg}ms
-                  - Error Rate: ${performance.errors}%
-                  - Throughput: ${performance.rps} req/sec
+                  - Response Time: ${avgResponseTime}ms
+                  - Error Rate: ${performance.errors || 'N/A'}%
+                  - Throughput: ${performance.rps || 'N/A'} req/sec
                 `,
                 labels: ['performance', 'investigation-needed']
               });
