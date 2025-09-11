@@ -211,12 +211,12 @@ jobs:
           railway login --token "$RAILWAY_TOKEN"
           echo "Deploying backend to staging..."
           cd backend
-          railway link 10b65955-d74c-46a7-930a-05a590867ac9 --service "$BACKEND_SERVICE" --environment staging
+          railway link --project 10b65955-d74c-46a7-930a-05a590867ac9 --environment staging --service "$BACKEND_SERVICE"
           railway up --detach
           cd ..
           echo "Deploying frontend to staging..."
-          cd frontend
-          railway link 10b65955-d74c-46a7-930a-05a590867ac9 --service "$FRONTEND_SERVICE" --environment staging
+          cd frontend  
+          railway link --project 10b65955-d74c-46a7-930a-05a590867ac9 --environment staging --service "$FRONTEND_SERVICE"
           railway up --detach
           cd ..
       - name: Run staging smoke tests
