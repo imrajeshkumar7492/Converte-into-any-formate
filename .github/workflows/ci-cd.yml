@@ -199,6 +199,7 @@ jobs:
       - name: Deploy to Railway (Staging)
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: "10b65955-d74c-46a7-930a-05a590867ac9"
         run: |
           if [ -z "$RAILWAY_TOKEN" ]; then
             echo "❌ Missing RAILWAY_TOKEN"
@@ -208,10 +209,14 @@ jobs:
           railway --version
           echo "Deploying backend to staging..."
           cd backend
+          export RAILWAY_SERVICE_ID="${{ secrets.RAILWAY_BACKEND_SERVICE }}"
+          export RAILWAY_ENVIRONMENT="staging"
           railway up --detach || echo "Backend deployment failed, continuing..."
           cd ..
           echo "Deploying frontend to staging..."
           cd frontend
+          export RAILWAY_SERVICE_ID="${{ secrets.RAILWAY_FRONTEND_SERVICE }}"
+          export RAILWAY_ENVIRONMENT="staging"
           railway up --detach || echo "Frontend deployment failed, continuing..."
           cd ..
       - name: Run staging smoke tests
