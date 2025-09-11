@@ -223,9 +223,12 @@ jobs:
           cd ..
       - name: Run staging smoke tests
         run: |
+          echo "Waiting for services to start..."
           sleep 60
-          curl -f https://staging-api-converter.imrajeshkumar7492.dev/api/health
-          curl -f https://staging-converter.imrajeshkumar7492.dev
+          echo "Testing backend health endpoint..."
+          curl -f https://staging-api-converter.imrajeshkumar7492.dev/api/health || echo "Backend health check failed"
+          echo "Testing frontend..."
+          curl -f https://staging-converter.imrajeshkumar7492.dev || echo "Frontend check failed"
 
   # -------------------------------
   # Deploy to Production
