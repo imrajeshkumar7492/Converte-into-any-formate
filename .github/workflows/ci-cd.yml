@@ -259,16 +259,20 @@ jobs:
           fi
           npm install -g @railway/cli
           railway --version
+          echo "Authenticating with Railway..."
+          railway auth login --token "$RAILWAY_TOKEN"
           echo "Deploying backend to production..."
           cd backend
           export RAILWAY_PROJECT_ID="10b65955-d74c-46a7-930a-05a590867ac9"
           export RAILWAY_ENVIRONMENT="production"
+          railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" || echo "Link failed, trying direct deployment"
           railway up --detach
           cd ..
           echo "Deploying frontend to production..."
           cd frontend
           export RAILWAY_PROJECT_ID="10b65955-d74c-46a7-930a-05a590867ac9"
           export RAILWAY_ENVIRONMENT="production"
+          railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" || echo "Link failed, trying direct deployment"
           railway up --detach
           cd ..
       - name: Run production smoke tests
