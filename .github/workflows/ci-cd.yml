@@ -249,13 +249,15 @@ jobs:
           fi
           npm install -g @railway/cli
           railway --version
+          echo "Listing available services..."
+          railway service list || echo "Could not list services"
           echo "Deploying backend to production..."
           cd backend
-          railway up --service ${{ secrets.RAILWAY_BACKEND_SERVICE }} --detach || echo "Backend deployment failed, continuing..."
+          railway up --service "${{ secrets.RAILWAY_BACKEND_SERVICE }}" --detach || echo "Backend deployment failed, continuing..."
           cd ..
           echo "Deploying frontend to production..."
           cd frontend
-          railway up --service ${{ secrets.RAILWAY_FRONTEND_SERVICE }} --detach || echo "Frontend deployment failed, continuing..."
+          railway up --service "${{ secrets.RAILWAY_FRONTEND_SERVICE }}" --detach || echo "Frontend deployment failed, continuing..."
           cd ..
       - name: Run production smoke tests
         run: |
