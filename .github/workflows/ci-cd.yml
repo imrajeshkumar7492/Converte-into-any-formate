@@ -244,8 +244,8 @@ jobs:
       - name: Deploy to Railway (Production)
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          BACKEND_SERVICE: ${{ secrets.RAILWAY_BACKEND_SERVICE }}
-          FRONTEND_SERVICE: ${{ secrets.RAILWAY_FRONTEND_SERVICE }}
+          RAILWAY_PROJECT_ID: "10b65955-d74c-46a7-930a-05a590867ac9"
+          RAILWAY_ENVIRONMENT: "production"
         run: |
           if [ -z "$RAILWAY_TOKEN" ]; then
             echo "❌ Missing RAILWAY_TOKEN"
@@ -256,12 +256,14 @@ jobs:
           railway login --token "$RAILWAY_TOKEN"
           echo "Deploying backend to production..."
           cd backend
-          railway link --project 10b65955-d74c-46a7-930a-05a590867ac9 --environment production --service "$BACKEND_SERVICE"
+          export RAILWAY_PROJECT_ID="10b65955-d74c-46a7-930a-05a590867ac9"
+          export RAILWAY_ENVIRONMENT="production"
           railway up --detach
           cd ..
           echo "Deploying frontend to production..."
           cd frontend
-          railway link --project 10b65955-d74c-46a7-930a-05a590867ac9 --environment production --service "$FRONTEND_SERVICE"
+          export RAILWAY_PROJECT_ID="10b65955-d74c-46a7-930a-05a590867ac9"
+          export RAILWAY_ENVIRONMENT="production"
           railway up --detach
           cd ..
       - name: Run production smoke tests
