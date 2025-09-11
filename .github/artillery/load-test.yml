@@ -40,7 +40,7 @@ scenarios:
       - post:
           url: "/api/upload"
           formData:
-            files: "./test-files/sample.txt"
+            files: "test-files/sample.txt"
           expect:
             - statusCode: 200
       - think: 2
